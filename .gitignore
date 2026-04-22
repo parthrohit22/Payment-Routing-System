@@ -1,0 +1,12 @@
+# Mac
+.DS_Store
+
+# Python
+venv/
+.env
+
+# Node
+node_modules/
+
+# Angular build
+dist/
