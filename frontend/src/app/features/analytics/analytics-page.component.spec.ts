@@ -1,56 +1,113 @@
+import { Directive, Input, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
-import { AnalyticsService } from '../../core/services/analytics.service';
+import { vi } from 'vitest';
+
 import { AnalyticsPageComponent } from './analytics-page.component';
+import { AnalyticsService } from '../../core/services/analytics.service';
+import { AuthService } from '../../core/services/auth.service';
+import { NgChartsModule } from 'ng2-charts';
+
+@Directive({
+  selector: 'canvas[baseChart]',
+  standalone: true,
+})
+class BaseChartStubDirective {
+  @Input() data: unknown;
+  @Input() type: unknown;
+}
 
 describe('AnalyticsPageComponent', () => {
-  const buildComponent = async (serviceOverride: Partial<AnalyticsService>) => {
-    await TestBed.configureTestingModule({
-      imports: [AnalyticsPageComponent],
-      providers: [{ provide: AnalyticsService, useValue: serviceOverride }],
-    }).compileComponents();
-
-    const fixture = TestBed.createComponent(AnalyticsPageComponent);
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-    return fixture;
+  let fixture: ComponentFixture<AnalyticsPageComponent>;
+  let authService: {
+    role: ReturnType<typeof signal>;
+    hasAnyRole: ReturnType<typeof vi.fn>;
+  };
+  let analyticsService: {
+    refreshes: ReturnType<typeof signal>;
+    getPaymentVolume: ReturnType<typeof vi.fn>;
+    getProviderLatency: ReturnType<typeof vi.fn>;
+    getPaymentStatus: ReturnType<typeof vi.fn>;
   };
 
-  it('renders analytics metrics returned by the API', async () => {
-    const fixture = await buildComponent({
-      getPaymentVolume: () => of([{ currency: 'GBP', total_volume: 2500 }]),
-      getProviderLatency: () => of([{ provider: 'Stripe', average_latency_ms: 180 }]),
-      getPaymentStatus: () => of([{ status: 'succeeded', count: 3 }]),
-      refreshes: signal(0),
-    });
+  beforeEach(async () => {
+    authService = {
+      role: signal<'admin' | 'finance' | 'merchant'>('admin'),
+      hasAnyRole: vi.fn().mockReturnValue(true),
+    };
 
-    expect(fixture.nativeElement.textContent).toContain('Volume by currency');
-    expect(fixture.nativeElement.textContent).toContain('Stripe');
-    expect(fixture.nativeElement.textContent).toContain('Succeeded');
+    analyticsService = {
+      refreshes: signal(0),
+      getPaymentVolume: vi.fn().mockReturnValue(
+        of([{ currency: 'GBP', total_volume: 120000 }])
+      ),
+      getProviderLatency: vi.fn().mockReturnValue(
+        of([{ provider: 'Stripe', average_latency_ms: 140 }])
+      ),
+      getPaymentStatus: vi.fn().mockReturnValue(
+        of([{ status: 'success', count: 8 }])
+      ),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [AnalyticsPageComponent],
+      providers: [
+        { provide: AuthService, useValue: authService },
+        { provide: AnalyticsService, useValue: analyticsService },
+      ],
+    })
+      .overrideComponent(AnalyticsPageComponent, {
+        remove: { imports: [NgChartsModule] },
+        add: { imports: [BaseChartStubDirective] },
+      })
+      .compileComponents();
+
+    fixture = mountComponent();
   });
 
-  it('shows an empty state when the analytics endpoints return no rows', async () => {
-    const fixture = await buildComponent({
-      getPaymentVolume: () => of([]),
-      getProviderLatency: () => of([]),
-      getPaymentStatus: () => of([]),
-      refreshes: signal(0),
-    });
-
-    expect(fixture.nativeElement.textContent).toContain('No analytics data');
+  afterEach(() => {
+    fixture?.destroy();
   });
 
-  it('shows an error message when analytics loading fails', async () => {
-    const fixture = await buildComponent({
-      getPaymentVolume: () =>
-        throwError(() => ({ error: { message: 'Access denied for analytics' } })),
-      getProviderLatency: () => of([]),
-      getPaymentStatus: () => of([]),
-      refreshes: signal(0),
-    });
+  it('shows merchant-scoped subtitle for merchants', async () => {
+    authService.role.set('merchant');
+    fixture.destroy();
+    fixture = mountComponent();
 
-    expect(fixture.nativeElement.textContent).toContain('Access denied for analytics');
+    expect(fixture.nativeElement.textContent).toContain('Your payment metrics');
   });
+
+  it('renders metric sections when analytics data is available', () => {
+    const text = fixture.nativeElement.textContent;
+
+    expect(text).toContain('Volume by currency');
+    expect(text).toContain('Provider latency');
+    expect(text).toContain('Status distribution');
+    expect(fixture.nativeElement.querySelectorAll('canvas').length).toBe(3);
+  });
+
+  it('shows an access state for unauthorized users', async () => {
+    authService.hasAnyRole.mockReturnValue(false);
+    fixture.destroy();
+    fixture = mountComponent();
+
+    expect(fixture.nativeElement.textContent).toContain('Access restricted');
+  });
+
+  it('shows an error state when analytics loading fails', async () => {
+    analyticsService.getPaymentVolume.mockReturnValue(
+      throwError(() => ({ error: { message: 'Load failed' } }))
+    );
+
+    fixture.destroy();
+    fixture = mountComponent();
+
+    expect(fixture.nativeElement.textContent).toContain('Load failed');
+  });
+
+  function mountComponent(): ComponentFixture<AnalyticsPageComponent> {
+    const nextFixture = TestBed.createComponent(AnalyticsPageComponent);
+    nextFixture.detectChanges();
+    return nextFixture;
+  }
 });

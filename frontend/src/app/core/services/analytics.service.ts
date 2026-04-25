@@ -1,5 +1,5 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { map, Observable } from 'rxjs';
 import { API_ROOT } from '../constants/app.constants';
 import { ApiResponse } from '../models/api.models';
@@ -13,30 +13,57 @@ import {
   providedIn: 'root',
 })
 export class AnalyticsService {
-  private readonly http = inject(HttpClient);
-  private readonly refreshToken = signal(0);
+  private http = inject(HttpClient);
+  private refreshToken = signal(0);
 
-  readonly refreshes = this.refreshToken.asReadonly();
+  refreshes = this.refreshToken.asReadonly();
 
   refreshAfterMutation(): void {
-    this.refreshToken.update((value) => value + 1);
+    this.refreshToken.update(v => v + 1);
   }
 
-  getPaymentVolume(): Observable<PaymentVolumeMetric[]> {
-    return this.http
-      .get<ApiResponse<PaymentVolumeMetric[]>>(`${API_ROOT}/analytics/payment-volume`)
-      .pipe(map((response) => response.data ?? []));
+  private buildParams(filters: any): HttpParams {
+    let params = new HttpParams();
+
+    if (filters?.status && filters.status !== 'all') {
+      params = params.set('status', filters.status);
+    }
+
+    if (filters?.from) {
+      params = params.set('from', filters.from);
+    }
+
+    if (filters?.to) {
+      params = params.set('to', filters.to);
+    }
+
+    return params;
   }
 
-  getProviderLatency(): Observable<ProviderLatencyMetric[]> {
+  getPaymentVolume(filters?: any): Observable<PaymentVolumeMetric[]> {
     return this.http
-      .get<ApiResponse<ProviderLatencyMetric[]>>(`${API_ROOT}/analytics/provider-latency`)
-      .pipe(map((response) => response.data ?? []));
+      .get<ApiResponse<PaymentVolumeMetric[]>>(
+        `${API_ROOT}/analytics/payment-volume`,
+        { params: this.buildParams(filters) }
+      )
+      .pipe(map(res => res.data ?? []));
   }
 
-  getPaymentStatus(): Observable<PaymentStatusMetric[]> {
+  getProviderLatency(filters?: any): Observable<ProviderLatencyMetric[]> {
     return this.http
-      .get<ApiResponse<PaymentStatusMetric[]>>(`${API_ROOT}/analytics/payment-status`)
-      .pipe(map((response) => response.data ?? []));
+      .get<ApiResponse<ProviderLatencyMetric[]>>(
+        `${API_ROOT}/analytics/provider-latency`,
+        { params: this.buildParams(filters) }
+      )
+      .pipe(map(res => res.data ?? []));
+  }
+
+  getPaymentStatus(filters?: any): Observable<PaymentStatusMetric[]> {
+    return this.http
+      .get<ApiResponse<PaymentStatusMetric[]>>(
+        `${API_ROOT}/analytics/payment-status`,
+        { params: this.buildParams(filters) }
+      )
+      .pipe(map(res => res.data ?? []));
   }
 }
