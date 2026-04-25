@@ -25,7 +25,7 @@ export class RegisterPageComponent {
   protected readonly registerForm = this.formBuilder.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(6)]],
-    confirmPassword: ['', [Validators.required]],
+    role: ['merchant' as const, [Validators.required]],
   });
 
   protected submit(): void {
@@ -34,30 +34,26 @@ export class RegisterPageComponent {
       return;
     }
 
-    const { email, password, confirmPassword } = this.registerForm.getRawValue();
-    if (password !== confirmPassword) {
-      this.errorMessage.set('Passwords must match before you can create the account.');
-      return;
-    }
+    const { email, password, role } = this.registerForm.getRawValue();
 
     this.errorMessage.set('');
     this.isSubmitting.set(true);
 
     this.authService
-      .register(email, password)
+      .register(email, password, role)
       .pipe(
         finalize(() => this.isSubmitting.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: () => {
-          this.notificationService.success('Merchant account created. You can log in now.');
+          this.notificationService.success('Account created. Sign in to continue.');
           void this.router.navigate(['/login']);
         },
         error: (error) => {
-          this.errorMessage.set(
-            error.error?.message ?? 'Unable to create your merchant account right now.',
-          );
+          const message = error.error?.message ?? 'Unable to create account.';
+          this.errorMessage.set(message);
+          this.notificationService.error(message);
         },
       });
   }

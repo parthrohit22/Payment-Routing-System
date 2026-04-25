@@ -46,7 +46,7 @@ describe('LoginPageComponent', () => {
 
     expect(text).toContain('Payment Routing System');
     expect(text).toContain('Secure access to the routing workspace');
-    expect(text).toContain('Access restricted to authorised operators');
+    expect(text).toContain('Register');
   });
 
   it('does not render visible demo usernames or passwords', () => {

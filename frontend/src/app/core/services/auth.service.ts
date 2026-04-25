@@ -42,11 +42,15 @@ export class AuthService {
       );
   }
 
-  register(email: string, password: string): Observable<ApiResponse<unknown>> {
+  register(
+    email: string,
+    password: string,
+    role: UserRole = 'merchant'
+  ): Observable<ApiResponse<unknown>> {
     const formData = new FormData();
     formData.append('email', email.trim());
     formData.append('password', password);
-    formData.append('role', 'merchant');
+    formData.append('role', role);
 
     return this.http.post<ApiResponse<unknown>>(`${API_ROOT}/auth/register`, formData);
   }

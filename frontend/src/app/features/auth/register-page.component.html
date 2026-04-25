@@ -1,8 +1,8 @@
 <main class="auth-page">
   <section class="auth-form-card panel">
     <div class="auth-form-card__heading">
-      <h1>Create merchant account</h1>
-      <p>Merchant access only</p>
+      <h1>Create account</h1>
+      <p>Merchant access</p>
     </div>
 
     <form class="field-group" [formGroup]="registerForm" (ngSubmit)="submit()">
@@ -23,8 +23,10 @@
       </div>
 
       <div class="field">
-        <label for="register-confirm">Confirm password</label>
-        <input id="register-confirm" type="password" formControlName="confirmPassword" />
+        <label for="register-role">Role</label>
+        <select id="register-role" formControlName="role">
+          <option value="merchant">merchant</option>
+        </select>
       </div>
 
       @if (errorMessage()) {
@@ -37,7 +39,8 @@
     </form>
 
     <p class="auth-form-card__footer">
-      <a routerLink="/login">Back to sign in</a>
+      Already have an account?
+      <a routerLink="/login">Sign in</a>
     </p>
   </section>
 </main>

@@ -1,14 +1,21 @@
 <main class="auth-page">
   <section class="auth-form-card panel">
+
     <div class="auth-form-card__heading">
       <h1>Payment Routing System</h1>
       <p>Secure access to the routing workspace</p>
     </div>
 
     <form class="field-group" [formGroup]="loginForm" (ngSubmit)="submit()">
+
       <div class="field">
         <label for="login-email">Email</label>
-        <input id="login-email" type="email" formControlName="email" />
+        <input
+          id="login-email"
+          type="email"
+          formControlName="email"
+          autocomplete="email"
+        />
         @if (loginForm.controls.email.touched && loginForm.controls.email.invalid) {
           <p class="field__error">Enter a valid email.</p>
         }
@@ -16,7 +23,12 @@
 
       <div class="field">
         <label for="login-password">Password</label>
-        <input id="login-password" type="password" formControlName="password" />
+        <input
+          id="login-password"
+          type="password"
+          formControlName="password"
+          autocomplete="current-password"
+        />
         @if (loginForm.controls.password.touched && loginForm.controls.password.invalid) {
           <p class="field__error">Password is required.</p>
         }
@@ -26,11 +38,21 @@
         <p class="field__error">{{ errorMessage() }}</p>
       }
 
-      <button type="submit" class="button button--primary" [disabled]="isSubmitting()">
+      <button
+        type="submit"
+        class="button button--primary"
+        [class.is-loading]="isSubmitting()"
+        [disabled]="isSubmitting()"
+      >
         {{ isSubmitting() ? 'Signing in...' : 'Sign in' }}
       </button>
+
     </form>
 
-    <p class="auth-form-card__footer">Access restricted to authorised operators</p>
+    <p class="auth-form-card__footer">
+      Don’t have an account?
+      <a routerLink="/register">Register</a>
+    </p>
+
   </section>
 </main>

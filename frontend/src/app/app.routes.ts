@@ -42,7 +42,7 @@ export const routes: Routes = [
         path: 'payments',
         canActivate: [roleGuard],
         data: {
-          roles: ['admin', 'merchant'],
+          roles: ['admin', 'merchant', 'finance'],
         },
         loadComponent: () =>
           import('./features/payments/payments-page.component').then(
@@ -53,7 +53,7 @@ export const routes: Routes = [
         path: 'analytics',
         canActivate: [roleGuard],
         data: {
-          roles: ['admin', 'finance'],
+          roles: ['admin', 'finance', 'merchant'],
         },
         loadComponent: () =>
           import('./features/analytics/analytics-page.component').then(

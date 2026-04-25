@@ -1,14 +1,15 @@
 import { Component, DestroyRef, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule, Validators, FormBuilder } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs/operators';
 import { AuthService } from '../../core/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
 
 @Component({
   selector: 'app-login-page',
-  imports: [ReactiveFormsModule],
+  standalone: true,
+  imports: [ReactiveFormsModule, RouterLink],
   templateUrl: './login-page.component.html',
   styleUrl: './login-page.component.css',
 })
@@ -31,7 +32,9 @@ export class LoginPageComponent {
     effect(() => {
       const session = this.authService.session();
       if (session) {
-        void this.router.navigateByUrl(this.authService.landingRouteForRole(session.role));
+        void this.router.navigateByUrl(
+          this.authService.landingRouteForRole(session.role)
+        );
       }
     });
   }
@@ -46,19 +49,24 @@ export class LoginPageComponent {
     this.isSubmitting.set(true);
 
     const { email, password } = this.loginForm.getRawValue();
+
     this.authService
       .login(email, password)
       .pipe(
         finalize(() => this.isSubmitting.set(false)),
-        takeUntilDestroyed(this.destroyRef),
+        takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
         next: (session) => {
           this.notificationService.success('Signed in successfully.');
-          void this.router.navigateByUrl(this.authService.landingRouteForRole(session.role));
+          void this.router.navigateByUrl(
+            this.authService.landingRouteForRole(session.role)
+          );
         },
         error: (error) => {
-          this.errorMessage.set(error.error?.message ?? 'Unable to sign in right now.');
+          this.errorMessage.set(
+            error.error?.message ?? 'Unable to sign in right now.'
+          );
         },
       });
   }
