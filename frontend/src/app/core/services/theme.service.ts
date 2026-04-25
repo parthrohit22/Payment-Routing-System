@@ -9,8 +9,7 @@ export type ThemeMode = 'light' | 'dark';
 })
 export class ThemeService {
   private readonly document = inject(DOCUMENT);
-  private readonly storageAvailable =
-    typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+  private readonly storage = this.resolveStorage();
   private readonly mediaQuery =
     typeof window !== 'undefined' && typeof window.matchMedia === 'function'
       ? window.matchMedia('(prefers-color-scheme: dark)')
@@ -40,14 +39,14 @@ export class ThemeService {
     this.currentThemeSignal.set(theme);
     this.applyTheme(theme);
 
-    if (!this.storageAvailable) {
+    if (!this.storage) {
       return;
     }
 
     if (persist) {
-      window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+      this.storage.setItem(THEME_STORAGE_KEY, theme);
     } else {
-      window.localStorage.removeItem(THEME_STORAGE_KEY);
+      this.storage.removeItem(THEME_STORAGE_KEY);
     }
   }
 
@@ -61,11 +60,11 @@ export class ThemeService {
   }
 
   private getStoredTheme(): ThemeMode | null {
-    if (!this.storageAvailable) {
+    if (!this.storage) {
       return null;
     }
 
-    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+    const storedTheme = this.storage.getItem(THEME_STORAGE_KEY);
     if (storedTheme === 'light' || storedTheme === 'dark') {
       return storedTheme;
     }
@@ -77,5 +76,22 @@ export class ThemeService {
     const root = this.document.documentElement;
     root.dataset['theme'] = theme;
     root.style.colorScheme = theme;
+  }
+
+  private resolveStorage(): Storage | null {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    const storage = window.localStorage;
+    if (
+      typeof storage?.getItem !== 'function' ||
+      typeof storage?.setItem !== 'function' ||
+      typeof storage?.removeItem !== 'function'
+    ) {
+      return null;
+    }
+
+    return storage;
   }
 }

@@ -5,6 +5,8 @@ import { ThemeService } from './theme.service';
 
 describe('ThemeService', () => {
   const originalMatchMedia = window.matchMedia;
+  const originalLocalStorage = window.localStorage;
+  const storage = new Map<string, string>();
 
   const installMatchMedia = (matches: boolean) => {
     Object.defineProperty(window, 'matchMedia', {
@@ -14,27 +16,53 @@ describe('ThemeService', () => {
         matches,
         media: '(prefers-color-scheme: dark)',
         addEventListener: vi.fn(),
-        removeEventListener: vi.fn()
-      }))
+        removeEventListener: vi.fn(),
+      })),
+    });
+  };
+
+  const installLocalStorage = () => {
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      writable: true,
+      value: {
+        getItem: (key: string) => storage.get(key) ?? null,
+        setItem: (key: string, value: string) => {
+          storage.set(key, value);
+        },
+        removeItem: (key: string) => {
+          storage.delete(key);
+        },
+        clear: () => {
+          storage.clear();
+        },
+      },
     });
   };
 
   beforeEach(() => {
-    localStorage.clear();
+    storage.clear();
+    installLocalStorage();
     document.documentElement.removeAttribute('data-theme');
     document.documentElement.style.colorScheme = '';
     TestBed.resetTestingModule();
   });
 
   afterEach(() => {
-    localStorage.clear();
+    storage.clear();
     document.documentElement.removeAttribute('data-theme');
     document.documentElement.style.colorScheme = '';
 
     Object.defineProperty(window, 'matchMedia', {
       configurable: true,
       writable: true,
-      value: originalMatchMedia
+      value: originalMatchMedia,
+    });
+
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      writable: true,
+      value: originalLocalStorage,
     });
   });
 
@@ -42,7 +70,7 @@ describe('ThemeService', () => {
     installMatchMedia(true);
 
     TestBed.configureTestingModule({
-      providers: [ThemeService]
+      providers: [ThemeService],
     });
 
     const service = TestBed.inject(ThemeService);
@@ -56,23 +84,23 @@ describe('ThemeService', () => {
     installMatchMedia(false);
 
     TestBed.configureTestingModule({
-      providers: [ThemeService]
+      providers: [ThemeService],
     });
 
     const service = TestBed.inject(ThemeService);
     service.setTheme('dark');
 
     expect(service.currentTheme()).toBe('dark');
-    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
+    expect(storage.get(THEME_STORAGE_KEY)).toBe('dark');
     expect(document.documentElement.dataset['theme']).toBe('dark');
   });
 
   it('prefers the stored theme over system preference', () => {
     installMatchMedia(true);
-    localStorage.setItem(THEME_STORAGE_KEY, 'light');
+    storage.set(THEME_STORAGE_KEY, 'light');
 
     TestBed.configureTestingModule({
-      providers: [ThemeService]
+      providers: [ThemeService],
     });
 
     const service = TestBed.inject(ThemeService);
