@@ -2,8 +2,16 @@
   margin-bottom: 1.25rem;
 }
 
+/* FIX: missing grid layout */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
 .dashboard-page__section {
   padding: 1rem;
+  margin-bottom: 1rem; /* FIX: consistent spacing */
 }
 
 .dashboard-page__feed {
@@ -52,6 +60,13 @@
   border-color: color-mix(in srgb, var(--danger) 30%, var(--border-soft));
 }
 
+/* RESPONSIVE FIX */
+@media (max-width: 960px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 760px) {
   .dashboard-page__feed-item {
     flex-direction: column;
@@ -59,5 +74,9 @@
 
   .dashboard-page__feed-meta {
     justify-items: start;
+  }
+
+  .metrics-grid {
+    grid-template-columns: 1fr;
   }
 }

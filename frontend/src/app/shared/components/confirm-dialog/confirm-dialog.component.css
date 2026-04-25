@@ -19,14 +19,6 @@
   box-shadow: var(--shadow-soft);
 }
 
-.dialog-card__eyebrow {
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  font-weight: 700;
-}
-
 .dialog-card h2,
 .dialog-card p {
   margin: 0;

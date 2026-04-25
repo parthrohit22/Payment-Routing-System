@@ -1,22 +1,23 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { CurrencyPipe, DatePipe, TitleCasePipe } from '@angular/common';
+import { CurrencyPipe, DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { forkJoin, of } from 'rxjs';
 import { finalize } from 'rxjs/operators';
-import { PaymentRecord } from '../../core/models/payment.models';
+
+import { PaymentRecord, PaginatedPaymentsResponse } from '../../core/models/payment.models';
 import { AuthService } from '../../core/services/auth.service';
 import { PaymentsService } from '../../core/services/payments.service';
+
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { StatCardComponent } from '../../shared/components/stat-card/stat-card.component';
 
 @Component({
   selector: 'app-dashboard-page',
+  standalone: true,
   imports: [
     CurrencyPipe,
     DatePipe,
     RouterLink,
-    TitleCasePipe,
     EmptyStateComponent,
     StatCardComponent,
   ],
@@ -24,61 +25,75 @@ import { StatCardComponent } from '../../shared/components/stat-card/stat-card.c
   styleUrl: './dashboard-page.component.css',
 })
 export class DashboardPageComponent {
-  private readonly paymentsService = inject(PaymentsService);
-  private readonly authService = inject(AuthService);
-  private readonly destroyRef = inject(DestroyRef);
+  private paymentsService = inject(PaymentsService);
+  private authService = inject(AuthService);
+  private destroyRef = inject(DestroyRef);
 
-  protected readonly isLoading = signal(true);
-  protected readonly errorMessage = signal('');
-  protected readonly payments = signal<PaymentRecord[]>([]);
+  role = this.authService.role;
 
-  protected readonly hasPaymentsAccess = computed(() => {
-    const role = this.authService.role();
-    return role === 'admin' || role === 'merchant';
-  });
+  isLoading = signal(true);
+  errorMessage = signal('');
+  payments = signal<PaymentRecord[]>([]);
 
-  protected readonly totalPayments = computed(() => this.payments().length);
-  protected readonly successCount = computed(
-    () => this.payments().filter((payment) => payment.status === 'succeeded').length,
+  isAdmin = computed(() => this.role() === 'admin');
+  isMerchant = computed(() => this.role() === 'merchant');
+  isFinance = computed(() => this.role() === 'finance');
+
+  canSeePayments = computed(
+    () => this.isAdmin() || this.isMerchant() || this.isFinance()
   );
-  protected readonly pendingOrFailedCount = computed(
-    () => this.payments().filter((payment) => payment.status !== 'succeeded').length,
+
+  totalPayments = computed(() => this.payments().length);
+
+  successCount = computed(
+    () => this.payments().filter(p => p.status === 'success').length
   );
-  protected readonly regionCount = computed(
-    () => new Set(this.payments().map((payment) => payment.region)).size,
+
+  pendingOrFailedCount = computed(
+    () => this.payments().filter(p => p.status !== 'success').length
   );
-  protected readonly recentPayments = computed(() =>
+
+  regionCount = computed(
+    () => new Set(this.payments().map(p => p.region)).size
+  );
+
+  recentPayments = computed(() =>
     [...this.payments()]
       .sort(
-        (left, right) =>
-          new Date(right.initiated_at).getTime() - new Date(left.initiated_at).getTime(),
+        (a, b) =>
+          new Date(b.initiated_at).getTime() -
+          new Date(a.initiated_at).getTime()
       )
-      .slice(0, 5),
+      .slice(0, 5)
   );
+
   constructor() {
     this.loadDashboard();
   }
 
   private loadDashboard(): void {
+    if (!this.canSeePayments()) {
+      this.isLoading.set(false);
+      return;
+    }
+
     this.isLoading.set(true);
     this.errorMessage.set('');
 
-    const paymentsRequest = this.hasPaymentsAccess()
-      ? this.paymentsService.fetchAllPayments()
-      : of([]);
-    forkJoin({
-      payments: paymentsRequest,
-    })
+    this.paymentsService
+      .fetchPayments(1, 100)
       .pipe(
         finalize(() => this.isLoading.set(false)),
-        takeUntilDestroyed(this.destroyRef),
+        takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
-        next: ({ payments }) => {
-          this.payments.set(payments);
+        next: (res: PaginatedPaymentsResponse) => {
+          this.payments.set(res.payments);
         },
-        error: (error) => {
-          this.errorMessage.set(error.error?.message ?? 'Unable to load overview.');
+        error: (err: any) => {
+          this.errorMessage.set(
+            err?.error?.message ?? 'Unable to load dashboard.'
+          );
         },
       });
   }

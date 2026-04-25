@@ -4,10 +4,11 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { ROLE_LABELS } from '../../../core/constants/app.constants';
 import { AuthService } from '../../../core/services/auth.service';
 import { HealthService } from '../../../core/services/health.service';
+import { ThemeToggleComponent } from '../theme-toggle/theme-toggle.component';
 
 @Component({
   selector: 'app-shell',
-  imports: [NgClass, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [NgClass, RouterLink, RouterLinkActive, RouterOutlet, ThemeToggleComponent],
   templateUrl: './app-shell.component.html',
   styleUrl: './app-shell.component.css',
 })
@@ -25,12 +26,12 @@ export class AppShellComponent {
 
   protected readonly canViewAnalytics = computed(() => {
     const role = this.authService.role();
-    return role === 'admin' || role === 'finance';
+    return role === 'admin' || role === 'finance' || role === 'merchant';
   });
 
   protected readonly canViewPayments = computed(() => {
     const role = this.authService.role();
-    return role === 'admin' || role === 'merchant';
+    return role === 'admin' || role === 'merchant' || role === 'finance';
   });
 
   protected readonly navItems = computed(() => {

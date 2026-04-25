@@ -17,9 +17,8 @@
 
   <div class="app-shell__main">
     <header class="app-shell__header">
-      <div>
-        <span class="page-eyebrow">Internal tool</span>
-        <h1>Payment operations</h1>
+      <div class="app-shell__header-copy">
+        <h1>Payment Routing System</h1>
       </div>
 
       <div class="app-shell__header-actions">
@@ -33,6 +32,7 @@
         >
           {{ backendHealthy() === true ? 'API live' : 'API checking' }}
         </span>
+        <app-theme-toggle></app-theme-toggle>
         <button type="button" class="button button--ghost" (click)="logout()">Log out</button>
       </div>
     </header>
