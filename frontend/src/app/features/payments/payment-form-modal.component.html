@@ -1,0 +1,119 @@
+@if (open()) {
+  <div class="payment-modal__backdrop" (click)="cancelled.emit()">
+    <section
+      class="payment-modal__card panel"
+      role="dialog"
+      aria-modal="true"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="section-heading">
+        <h2>{{ title() }}</h2>
+        <button type="button" class="button button--ghost" (click)="cancelled.emit()">Close</button>
+      </div>
+
+      <form class="payment-modal__form" [formGroup]="paymentForm" (ngSubmit)="submit()">
+        <div class="field">
+          <label for="merchant">Merchant</label>
+          <input id="merchant" type="text" formControlName="merchant" />
+          @if (paymentForm.controls.merchant.touched && paymentForm.controls.merchant.invalid) {
+            <p class="field__error">Merchant is required.</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="paymentType">Payment type</label>
+          <input id="paymentType" type="text" formControlName="paymentType" />
+          @if (
+            paymentForm.controls.paymentType.touched && paymentForm.controls.paymentType.invalid
+          ) {
+            <p class="field__error">Payment type is required.</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="amountMinor">Amount in minor units</label>
+          <input id="amountMinor" type="number" min="1" formControlName="amountMinor" />
+          @if (
+            paymentForm.controls.amountMinor.touched && paymentForm.controls.amountMinor.invalid
+          ) {
+            <p class="field__error">Enter a positive whole number.</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="currency">Currency</label>
+          <select id="currency" formControlName="currency">
+            @for (currency of currencyOptions; track currency) {
+              <option [value]="currency">{{ currency }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="region">Region</label>
+          <input id="region" type="text" formControlName="region" />
+          @if (paymentForm.controls.region.touched && paymentForm.controls.region.invalid) {
+            <p class="field__error">Region is required.</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="status">Status</label>
+          <select id="status" formControlName="status">
+            @for (status of statusOptions; track status) {
+              <option [value]="status">{{ status | titlecase }}</option>
+            }
+          </select>
+        </div>
+
+        <fieldset class="payment-modal__fieldset" formGroupName="customerDetails">
+          <legend>Customer</legend>
+
+          <div class="field">
+            <label for="customerName">Name</label>
+            <input id="customerName" type="text" formControlName="name" />
+            @if (
+              paymentForm.controls.customerDetails.controls.name.touched &&
+              paymentForm.controls.customerDetails.controls.name.invalid
+            ) {
+              <p class="field__error">Name is required.</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="customerEmail">Email</label>
+            <input id="customerEmail" type="email" formControlName="email" />
+            @if (
+              paymentForm.controls.customerDetails.controls.email.touched &&
+              paymentForm.controls.customerDetails.controls.email.invalid
+            ) {
+              <p class="field__error">Enter a valid email.</p>
+            }
+          </div>
+
+          <div class="field">
+            <label for="customerCountry">Country</label>
+            <input id="customerCountry" type="text" formControlName="country" />
+            @if (
+              paymentForm.controls.customerDetails.controls.country.touched &&
+              paymentForm.controls.customerDetails.controls.country.invalid
+            ) {
+              <p class="field__error">Country is required.</p>
+            }
+          </div>
+        </fieldset>
+
+        <div class="payment-modal__actions">
+          <button type="button" class="button button--ghost" (click)="cancelled.emit()">
+            Cancel
+          </button>
+          <button type="submit" class="button button--primary" [disabled]="submitting()">
+            {{
+              submitting() ? 'Saving...' : mode() === 'create' ? 'Create payment' : 'Save changes'
+            }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}

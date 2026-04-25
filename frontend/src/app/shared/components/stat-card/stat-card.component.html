@@ -1,0 +1,11 @@
+<article
+  class="stat-card"
+  [ngClass]="{
+    'stat-card--accent': tone() === 'accent',
+    'stat-card--success': tone() === 'success',
+    'stat-card--warning': tone() === 'warning',
+  }"
+>
+  <span class="stat-card__label">{{ label() }}</span>
+  <strong class="stat-card__value">{{ value() }}</strong>
+</article>

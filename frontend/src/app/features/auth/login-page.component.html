@@ -1,0 +1,36 @@
+<main class="auth-page">
+  <section class="auth-form-card panel">
+    <div class="auth-form-card__heading">
+      <h1>Payment Routing System</h1>
+      <p>Secure access to the routing workspace</p>
+    </div>
+
+    <form class="field-group" [formGroup]="loginForm" (ngSubmit)="submit()">
+      <div class="field">
+        <label for="login-email">Email</label>
+        <input id="login-email" type="email" formControlName="email" />
+        @if (loginForm.controls.email.touched && loginForm.controls.email.invalid) {
+          <p class="field__error">Enter a valid email.</p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="login-password">Password</label>
+        <input id="login-password" type="password" formControlName="password" />
+        @if (loginForm.controls.password.touched && loginForm.controls.password.invalid) {
+          <p class="field__error">Password is required.</p>
+        }
+      </div>
+
+      @if (errorMessage()) {
+        <p class="field__error">{{ errorMessage() }}</p>
+      }
+
+      <button type="submit" class="button button--primary" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Signing in...' : 'Sign in' }}
+      </button>
+    </form>
+
+    <p class="auth-form-card__footer">Access restricted to authorised operators</p>
+  </section>
+</main>

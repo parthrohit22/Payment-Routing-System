@@ -1,0 +1,123 @@
+.payment-detail {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1rem;
+}
+
+.payment-detail__section {
+  display: grid;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-soft);
+}
+
+.payment-detail__section h3,
+.payment-detail__subheading h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.payment-detail__subheading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.payment-detail__list {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0;
+}
+
+.payment-detail__list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.payment-detail__list dt {
+  color: var(--text-secondary);
+}
+
+.payment-detail__list dd {
+  margin: 0;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.payment-detail__attempt-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.payment-detail__attempt {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.payment-detail__attempt:last-child {
+  border-bottom: 0;
+}
+
+.payment-detail__attempt strong {
+  color: var(--text-primary);
+}
+
+.payment-detail__attempt span {
+  color: var(--text-secondary);
+}
+
+.payment-detail__actions {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.payment-detail__modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 960;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(2, 6, 23, 0.52);
+}
+
+.payment-detail__attempt-modal {
+  width: min(28rem, 100%);
+  padding: 1rem;
+}
+
+.payment-detail__attempt-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.payment-detail__attempt-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+@media (max-width: 720px) {
+  .payment-detail__list div,
+  .payment-detail__subheading,
+  .payment-detail__attempt-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .payment-detail__list dd {
+    text-align: left;
+  }
+
+  .payment-detail__attempt {
+    grid-template-columns: 1fr;
+  }
+}

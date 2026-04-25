@@ -1,0 +1,43 @@
+<main class="auth-page">
+  <section class="auth-form-card panel">
+    <div class="auth-form-card__heading">
+      <h1>Create merchant account</h1>
+      <p>Merchant access only</p>
+    </div>
+
+    <form class="field-group" [formGroup]="registerForm" (ngSubmit)="submit()">
+      <div class="field">
+        <label for="register-email">Email</label>
+        <input id="register-email" type="email" formControlName="email" />
+        @if (registerForm.controls.email.touched && registerForm.controls.email.invalid) {
+          <p class="field__error">Enter a valid email.</p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="register-password">Password</label>
+        <input id="register-password" type="password" formControlName="password" />
+        @if (registerForm.controls.password.touched && registerForm.controls.password.invalid) {
+          <p class="field__error">Use at least 6 characters.</p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="register-confirm">Confirm password</label>
+        <input id="register-confirm" type="password" formControlName="confirmPassword" />
+      </div>
+
+      @if (errorMessage()) {
+        <p class="field__error">{{ errorMessage() }}</p>
+      }
+
+      <button type="submit" class="button button--primary" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Creating account...' : 'Create account' }}
+      </button>
+    </form>
+
+    <p class="auth-form-card__footer">
+      <a routerLink="/login">Back to sign in</a>
+    </p>
+  </section>
+</main>

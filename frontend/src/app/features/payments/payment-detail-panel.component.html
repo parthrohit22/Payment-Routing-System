@@ -1,0 +1,168 @@
+@if (payment(); as selectedPayment) {
+  <section class="payment-detail panel">
+    <div class="section-heading">
+      <h2>Payment Details</h2>
+      <button type="button" class="button button--ghost" (click)="closed.emit()">Clear</button>
+    </div>
+
+    <dl class="payment-detail__list">
+      <div>
+        <dt>Amount</dt>
+        <dd>{{ selectedPayment.amount_minor / 100 | currency: selectedPayment.currency }}</dd>
+      </div>
+      <div>
+        <dt>Currency</dt>
+        <dd>{{ selectedPayment.currency }}</dd>
+      </div>
+      <div>
+        <dt>Status</dt>
+        <dd>
+          <span
+            class="status-pill"
+            [class.status-pill--success]="selectedPayment.status === 'succeeded'"
+            [class.status-pill--warning]="selectedPayment.status === 'pending'"
+            [class.status-pill--danger]="selectedPayment.status === 'failed'"
+          >
+            {{ selectedPayment.status | titlecase }}
+          </span>
+        </dd>
+      </div>
+      <div>
+        <dt>Date</dt>
+        <dd>{{ selectedPayment.initiated_at | date: 'medium' }}</dd>
+      </div>
+    </dl>
+
+    <section class="payment-detail__section">
+      <h3>Customer</h3>
+      <dl class="payment-detail__list">
+        <div>
+          <dt>Name</dt>
+          <dd>{{ selectedPayment.customer_details.name || 'Not provided' }}</dd>
+        </div>
+        <div>
+          <dt>Email</dt>
+          <dd>{{ selectedPayment.customer_details.email || 'Not provided' }}</dd>
+        </div>
+        <div>
+          <dt>Country</dt>
+          <dd>{{ selectedPayment.customer_details.country || 'Not provided' }}</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="payment-detail__section">
+      <div class="payment-detail__subheading">
+        <h3>Provider Attempts</h3>
+        <button
+          *ngIf="canAddAttempt()"
+          type="button"
+          class="button button--primary"
+          (click)="openAttemptModal()"
+        >
+          Add attempt
+        </button>
+      </div>
+
+      @if (selectedPayment.provider_attempts.length) {
+        <div class="payment-detail__attempt-list">
+          @for (
+            attempt of selectedPayment.provider_attempts;
+            track attempt.provider + attempt.result + attempt.latency_ms + $index
+          ) {
+            <div class="payment-detail__attempt">
+              <strong>{{ attempt.provider }}</strong>
+              <span>{{ attempt.result | titlecase }}</span>
+              <span>{{ attempt.latency_ms }} ms</span>
+            </div>
+          }
+        </div>
+      } @else {
+        <p class="muted-copy">No attempts yet</p>
+      }
+    </section>
+
+    <div class="payment-detail__actions">
+      <button
+        *ngIf="canEdit()"
+        type="button"
+        class="button button--primary"
+        (click)="edited.emit()"
+      >
+        Edit payment
+      </button>
+      <button
+        *ngIf="canDelete()"
+        type="button"
+        class="button button--danger"
+        (click)="deleted.emit()"
+      >
+        Delete payment
+      </button>
+    </div>
+  </section>
+
+  @if (isAttemptModalOpen) {
+    <div class="payment-detail__modal-backdrop" (click)="closeAttemptModal()">
+      <section
+        class="payment-detail__attempt-modal panel"
+        role="dialog"
+        aria-modal="true"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="section-heading">
+          <h2>Add attempt</h2>
+          <button type="button" class="button button--ghost" (click)="closeAttemptModal()">
+            Close
+          </button>
+        </div>
+
+        <form
+          class="payment-detail__attempt-form"
+          [formGroup]="attemptForm"
+          (ngSubmit)="submitAttempt()"
+        >
+          <div class="field">
+            <label for="attemptProvider">Provider</label>
+            <select id="attemptProvider" formControlName="provider">
+              @for (provider of providerOptions; track provider) {
+                <option [value]="provider">{{ provider }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="attemptResult">Result</label>
+            <select id="attemptResult" formControlName="result">
+              @for (result of resultOptions; track result) {
+                <option [value]="result">{{ result | titlecase }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="attemptLatency">Latency ms</label>
+            <input id="attemptLatency" type="number" min="0" formControlName="latency_ms" />
+            @if (
+              attemptForm.controls.latency_ms.touched && attemptForm.controls.latency_ms.invalid
+            ) {
+              <p class="field__error">Latency must be a number.</p>
+            }
+          </div>
+
+          <div class="payment-detail__attempt-actions">
+            <button type="button" class="button button--ghost" (click)="closeAttemptModal()">
+              Cancel
+            </button>
+            <button type="submit" class="button button--primary">Save attempt</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  }
+} @else {
+  <app-empty-state
+    title="Select a payment"
+    message="Choose a row to view payment details."
+  ></app-empty-state>
+}

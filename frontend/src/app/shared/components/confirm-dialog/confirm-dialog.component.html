@@ -1,0 +1,32 @@
+@if (open()) {
+  <div class="dialog-backdrop" (click)="cancelled.emit()">
+    <section
+      class="dialog-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-title"
+      (click)="$event.stopPropagation()"
+    >
+      <span class="dialog-card__eyebrow">Confirmation</span>
+      <h2 id="confirm-title">{{ title() }}</h2>
+      <p>{{ message() }}</p>
+
+      <div class="dialog-card__actions">
+        <button type="button" class="button button--ghost" (click)="cancelled.emit()">
+          {{ cancelLabel() }}
+        </button>
+        <button
+          type="button"
+          class="button"
+          [ngClass]="{
+            'button--danger': tone() === 'danger',
+            'button--primary': tone() !== 'danger'
+          }"
+          (click)="confirmed.emit()"
+        >
+          {{ confirmLabel() }}
+        </button>
+      </div>
+    </section>
+  </div>
+}

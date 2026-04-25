@@ -1,0 +1,68 @@
+<header class="page-header">
+  <h1>Routing Overview</h1>
+  <p>Summary of payment activity</p>
+</header>
+
+@if (errorMessage()) {
+  <section class="panel dashboard-page__error">
+    <p>{{ errorMessage() }}</p>
+  </section>
+}
+
+<section class="metrics-grid dashboard-page__metrics">
+  <app-stat-card label="Total payments" [value]="totalPayments()"></app-stat-card>
+  <app-stat-card
+    label="Successful payments"
+    [value]="successCount()"
+    tone="success"
+  ></app-stat-card>
+  <app-stat-card
+    label="Failed / pending"
+    [value]="pendingOrFailedCount()"
+    tone="warning"
+  ></app-stat-card>
+  <app-stat-card label="Active regions" [value]="regionCount()"></app-stat-card>
+</section>
+
+<section class="panel dashboard-page__section">
+  <div class="section-heading">
+    <h2>Recent payments</h2>
+    @if (hasPaymentsAccess()) {
+      <a routerLink="/payments" class="button button--ghost">Open payments</a>
+    }
+  </div>
+
+  @if (isLoading()) {
+    <p class="muted-copy">Loading payments...</p>
+  } @else if (recentPayments().length) {
+    <div class="dashboard-page__feed">
+      @for (payment of recentPayments(); track payment._id ?? payment.initiated_at) {
+        <article class="dashboard-page__feed-item">
+          <div class="dashboard-page__feed-copy">
+            <strong>{{ payment.merchant }}</strong>
+            <span>
+              {{ payment.customer_details.name || 'No customer' }} · {{ payment.region }}
+            </span>
+          </div>
+          <div class="dashboard-page__feed-meta">
+            <strong>{{ payment.amount_minor / 100 | currency: payment.currency }}</strong>
+            <span
+              class="status-pill"
+              [class.status-pill--success]="payment.status === 'succeeded'"
+              [class.status-pill--warning]="payment.status === 'pending'"
+              [class.status-pill--danger]="payment.status === 'failed'"
+            >
+              {{ payment.status | titlecase }}
+            </span>
+            <small>{{ payment.initiated_at | date: 'mediumDate' }}</small>
+          </div>
+        </article>
+      }
+    </div>
+  } @else {
+    <app-empty-state
+      title="No payments found"
+      message="Create a payment to populate the overview."
+    ></app-empty-state>
+  }
+</section>

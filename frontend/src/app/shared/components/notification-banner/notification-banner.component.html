@@ -1,0 +1,20 @@
+@if (notification(); as alert) {
+  <div
+    class="notification-banner"
+    [ngClass]="{
+      'notification-banner--success': alert.tone === 'success',
+      'notification-banner--error': alert.tone === 'error',
+      'notification-banner--info': alert.tone === 'info'
+    }"
+    role="status"
+    aria-live="polite"
+  >
+    <div class="notification-banner__copy">
+      <span class="notification-banner__eyebrow">System notice</span>
+      <p>{{ alert.message }}</p>
+    </div>
+    <button type="button" class="notification-banner__close" (click)="dismiss()">
+      Dismiss
+    </button>
+  </div>
+}

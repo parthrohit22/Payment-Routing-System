@@ -1,0 +1,14 @@
+<button
+  type="button"
+  class="theme-toggle"
+  [attr.aria-label]="
+    isDark() ? 'Switch to light mode theme' : 'Switch to dark mode theme'
+  "
+  (click)="toggleTheme()"
+>
+  <span class="theme-toggle__track">
+    <span class="theme-toggle__label">Theme</span>
+    <span class="theme-toggle__value">{{ currentTheme() === 'dark' ? 'Dark' : 'Light' }}</span>
+  </span>
+  <span class="theme-toggle__thumb" [class.theme-toggle__thumb--dark]="isDark()"></span>
+</button>

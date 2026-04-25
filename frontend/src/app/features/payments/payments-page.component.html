@@ -1,0 +1,176 @@
+<header class="page-header">
+  <h1>Payments</h1>
+  <p>Search and manage payment records</p>
+</header>
+
+@if (errorMessage()) {
+  <section class="panel payments-page__error">
+    <p>{{ errorMessage() }}</p>
+  </section>
+}
+
+<section class="panel payments-page__toolbar">
+  <div class="payments-page__toolbar-actions">
+    <button type="button" class="button button--ghost" (click)="clearFilters()">
+      Reset filters
+    </button>
+    <button
+      *ngIf="canCreatePayments()"
+      type="button"
+      class="button button--primary"
+      (click)="openCreateModal()"
+    >
+      Add payment
+    </button>
+  </div>
+
+  <form class="payments-page__filters" [formGroup]="filterForm">
+    <div class="field payments-page__filters-search">
+      <label for="searchQuery">Search</label>
+      <input
+        id="searchQuery"
+        type="search"
+        placeholder="Merchant or customer"
+        formControlName="q"
+      />
+    </div>
+
+    <div class="field">
+      <label for="statusFilter">Status</label>
+      <select id="statusFilter" formControlName="status">
+        @for (status of statusOptions; track status) {
+          <option [value]="status">{{ status | titlecase }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="regionFilter">Region</label>
+      <select id="regionFilter" formControlName="region">
+        <option value="all">All</option>
+        @for (region of availableRegions(); track region) {
+          <option [value]="region">{{ region }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="currencyFilter">Currency</label>
+      <select id="currencyFilter" formControlName="currency">
+        @for (currency of currencyOptions; track currency) {
+          <option [value]="currency">{{ currency | titlecase }}</option>
+        }
+      </select>
+    </div>
+  </form>
+</section>
+
+<div class="payments-page__layout">
+  <section class="panel payments-page__table-card">
+    <div class="section-heading">
+      <h2>Payment records</h2>
+      <span class="status-pill">Page {{ currentPage() }} of {{ totalPages() }}</span>
+    </div>
+
+    @if (isLoading()) {
+      <p class="muted-copy">Loading payments...</p>
+    } @else if (!pagedPayments().length) {
+      <app-empty-state
+        title="No payments found"
+        message="Change filters or add a payment."
+      ></app-empty-state>
+    } @else {
+      <div class="payments-page__table-wrap">
+        <table class="payments-page__table">
+          <thead>
+            <tr>
+              <th>Merchant</th>
+              <th>Customer</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (payment of pagedPayments(); track trackByPayment($index, payment)) {
+              <tr
+                (click)="selectPayment(payment)"
+                [class.is-selected]="selectedPayment()?._id === payment._id"
+              >
+                <td>
+                  <strong>{{ payment.merchant }}</strong>
+                </td>
+                <td>
+                  {{ payment.customer_details.name || 'No name' }}
+                  <small>{{ payment.customer_details.email || 'No email' }}</small>
+                </td>
+                <td class="payments-page__amount-cell">
+                  {{ payment.amount_minor / 100 | currency: payment.currency }}
+                </td>
+                <td>
+                  <span [class]="statusClass(payment.status)">
+                    {{ payment.status | titlecase }}
+                  </span>
+                </td>
+                <td>{{ payment.initiated_at | date: 'mediumDate' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="payments-page__pagination">
+        <button
+          type="button"
+          class="button button--ghost"
+          [disabled]="currentPage() === 1"
+          (click)="goToPage(currentPage() - 1)"
+        >
+          Previous
+        </button>
+        <button
+          type="button"
+          class="button button--ghost"
+          [disabled]="currentPage() === totalPages()"
+          (click)="goToPage(currentPage() + 1)"
+        >
+          Next
+        </button>
+      </div>
+    }
+  </section>
+
+  <app-payment-detail-panel
+    [payment]="selectedPayment()"
+    [canEdit]="canEditPayments()"
+    [canDelete]="canDeletePayments()"
+    [canAddAttempt]="canAddProviderAttempts()"
+    (closed)="clearSelection()"
+    (edited)="openEditModal()"
+    (deleted)="requestDelete()"
+    (providerAttemptAdded)="addProviderAttempt($event)"
+  ></app-payment-detail-panel>
+</div>
+
+<app-payment-form-modal
+  [open]="isFormOpen()"
+  [mode]="formMode()"
+  [payment]="formMode() === 'edit' ? selectedPayment() : null"
+  [submitting]="isSubmitting()"
+  (cancelled)="closeFormModal()"
+  (saved)="submitPayment($event)"
+></app-payment-form-modal>
+
+<app-confirm-dialog
+  [open]="!!deleteCandidate()"
+  title="Delete selected payment?"
+  [message]="
+    deleteCandidate()
+      ? 'This permanently removes the payment for ' + deleteCandidate()!.merchant + '.'
+      : ''
+  "
+  confirmLabel="Delete payment"
+  tone="danger"
+  (cancelled)="cancelDelete()"
+  (confirmed)="confirmDelete()"
+></app-confirm-dialog>

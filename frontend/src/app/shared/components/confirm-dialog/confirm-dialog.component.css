@@ -1,0 +1,56 @@
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 960;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(2, 6, 23, 0.52);
+}
+
+.dialog-card {
+  width: min(30rem, 100%);
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-panel);
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.dialog-card__eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.dialog-card h2,
+.dialog-card p {
+  margin: 0;
+}
+
+.dialog-card h2 {
+  font-size: 1.05rem;
+  color: var(--text-primary);
+}
+
+.dialog-card p {
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.dialog-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-top: 0.25rem;
+}
+
+@media (max-width: 640px) {
+  .dialog-card__actions {
+    flex-direction: column-reverse;
+  }
+}
