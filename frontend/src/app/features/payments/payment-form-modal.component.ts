@@ -1,17 +1,18 @@
 import { Component, computed, effect, inject, input, output } from '@angular/core';
-import { TitleCasePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { CURRENCY_OPTIONS, STATUS_OPTIONS } from '../../core/constants/app.constants';
+
+import { CURRENCY_OPTIONS } from '../../core/constants/app.constants';
 import { PaymentRecord, PaymentUpsertPayload } from '../../core/models/payment.models';
 
 @Component({
   selector: 'app-payment-form-modal',
-  imports: [ReactiveFormsModule, TitleCasePipe],
+  standalone: true,
+  imports: [ReactiveFormsModule],
   templateUrl: './payment-form-modal.component.html',
   styleUrl: './payment-form-modal.component.css',
 })
 export class PaymentFormModalComponent {
-  private readonly formBuilder = inject(FormBuilder);
+  private readonly fb = inject(FormBuilder);
 
   readonly open = input(false);
   readonly mode = input<'create' | 'edit'>('create');
@@ -22,32 +23,30 @@ export class PaymentFormModalComponent {
   readonly saved = output<PaymentUpsertPayload>();
 
   protected readonly currencyOptions = CURRENCY_OPTIONS;
-  protected readonly statusOptions = STATUS_OPTIONS;
+
   protected readonly title = computed(() =>
-    this.mode() === 'create' ? 'Create payment' : 'Edit payment',
+    this.mode() === 'create' ? 'Create payment' : 'Edit payment'
   );
 
-  protected readonly paymentForm = this.formBuilder.nonNullable.group({
-    merchant: ['', [Validators.required]],
-    paymentType: ['', [Validators.required]],
+  protected readonly paymentForm = this.fb.nonNullable.group({
+    merchant: ['', Validators.required],
+    paymentType: ['', Validators.required],
     amountMinor: [0, [Validators.required, Validators.min(1), Validators.pattern(/^\d+$/)]],
-    currency: ['GBP', [Validators.required]],
-    region: ['', [Validators.required]],
-    status: ['succeeded', [Validators.required]],
-    customerDetails: this.formBuilder.nonNullable.group({
-      name: ['', [Validators.required]],
+    currency: ['GBP', Validators.required],
+    region: ['', Validators.required],
+    customerDetails: this.fb.nonNullable.group({
+      name: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
-      country: ['', [Validators.required]],
+      country: ['', Validators.required],
     }),
   });
 
   constructor() {
     effect(() => {
-      if (!this.open()) {
-        return;
-      }
+      if (!this.open()) return;
 
       const payment = this.payment();
+
       if (this.mode() === 'edit' && payment) {
         this.paymentForm.reset(
           {
@@ -56,33 +55,33 @@ export class PaymentFormModalComponent {
             amountMinor: payment.amount_minor,
             currency: payment.currency,
             region: payment.region,
-            status: payment.status,
             customerDetails: {
-              name: payment.customer_details?.name ?? '',
-              email: payment.customer_details?.email ?? '',
-              country: payment.customer_details?.country ?? '',
+              name: payment.customer_details.name,
+              email: payment.customer_details.email,
+              country: payment.customer_details.country,
             },
           },
-          { emitEvent: false },
+          { emitEvent: false }
         );
-      } else {
-        this.paymentForm.reset(
-          {
-            merchant: '',
-            paymentType: '',
-            amountMinor: 0,
-            currency: 'GBP',
-            region: '',
-            status: 'succeeded',
-            customerDetails: {
-              name: '',
-              email: '',
-              country: '',
-            },
-          },
-          { emitEvent: false },
-        );
+
+        return;
       }
+
+      this.paymentForm.reset(
+        {
+          merchant: '',
+          paymentType: '',
+          amountMinor: 0,
+          currency: 'GBP',
+          region: '',
+          customerDetails: {
+            name: '',
+            email: '',
+            country: '',
+          },
+        },
+        { emitEvent: false }
+      );
     });
   }
 
@@ -92,16 +91,25 @@ export class PaymentFormModalComponent {
       return;
     }
 
-    const formValue = this.paymentForm.getRawValue();
+    const value = this.paymentForm.getRawValue();
+    const existingPayment = this.payment();
+
     this.saved.emit({
-      merchant: formValue.merchant,
-      paymentType: formValue.paymentType,
-      amountMinor: Number(formValue.amountMinor),
-      currency: formValue.currency,
-      region: formValue.region,
-      status: formValue.status,
-      customerDetails: formValue.customerDetails,
-      providerAttempts: [...(this.payment()?.provider_attempts ?? [])],
+      merchant: value.merchant.trim(),
+      paymentType: value.paymentType.trim(),
+      amountMinor: Number(value.amountMinor),
+      currency: value.currency,
+      region: value.region.trim(),
+      status: this.mode() === 'edit' ? existingPayment?.status ?? 'pending' : 'pending',
+      customerDetails: {
+        name: value.customerDetails.name.trim(),
+        email: value.customerDetails.email.trim(),
+        country: value.customerDetails.country.trim(),
+      },
+      providerAttempts:
+        this.mode() === 'edit'
+          ? [...(existingPayment?.provider_attempts ?? [])]
+          : [],
     });
   }
 }

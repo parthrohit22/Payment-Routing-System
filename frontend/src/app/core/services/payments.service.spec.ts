@@ -31,7 +31,7 @@ describe('PaymentsService', () => {
       (request) =>
         request.url === '/api/payments' &&
         request.params.get('page') === '1' &&
-        request.params.get('limit') === '2',
+        request.params.get('limit') === '2'
     );
 
     firstPage.flush({
@@ -45,7 +45,7 @@ describe('PaymentsService', () => {
             currency: 'GBP',
             region: 'UK',
             initiated_at: '2026-01-01T10:00:00',
-            status: 'succeeded',
+            status: 'success',
             customer_details: {},
             provider_attempts: [],
           },
@@ -72,7 +72,7 @@ describe('PaymentsService', () => {
       (request) =>
         request.url === '/api/payments' &&
         request.params.get('page') === '2' &&
-        request.params.get('limit') === '2',
+        request.params.get('limit') === '2'
     );
 
     secondPage.flush({
@@ -108,7 +108,7 @@ describe('PaymentsService', () => {
         amountMinor: 1000,
         currency: 'GBP',
         region: 'UK',
-        status: 'succeeded',
+        status: 'success',
         customerDetails: {
           name: 'John Smith',
           email: 'john@test.com',
@@ -146,12 +146,54 @@ describe('PaymentsService', () => {
     request.flush({ message: 'Payment added' });
   });
 
-  it('calls the dedicated status endpoint when filtering by status', () => {
-    service.fetchPaymentsByStatus('succeeded').subscribe();
+  it('filters cached payments by status', () => {
+    let statuses: string[] = [];
 
-    const request = httpController.expectOne('/api/payments/status/succeeded');
-    expect(request.request.method).toBe('GET');
+    service.fetchPaymentsByStatus('success').subscribe((payments) => {
+      statuses = payments.map((payment) => payment.status);
+    });
 
-    request.flush({ data: [] });
+    const request = httpController.expectOne(
+      (req) =>
+        req.url === '/api/payments' &&
+        req.params.get('page') === '1' &&
+        req.params.get('limit') === '50'
+    );
+
+    request.flush({
+      data: {
+        payments: [
+          {
+            _id: '1',
+            merchant: 'Amazon',
+            payment_type: 'card_payment',
+            amount_minor: 1000,
+            currency: 'GBP',
+            region: 'UK',
+            initiated_at: '2026-01-01T10:00:00',
+            status: 'success',
+            customer_details: {},
+            provider_attempts: [],
+          },
+          {
+            _id: '2',
+            merchant: 'Spotify',
+            payment_type: 'subscription',
+            amount_minor: 999,
+            currency: 'EUR',
+            region: 'EU',
+            initiated_at: '2026-01-02T10:00:00',
+            status: 'pending',
+            customer_details: {},
+            provider_attempts: [],
+          },
+        ],
+        page: 1,
+        limit: 50,
+        total: 2,
+      },
+    });
+
+    expect(statuses).toEqual(['success']);
   });
 });

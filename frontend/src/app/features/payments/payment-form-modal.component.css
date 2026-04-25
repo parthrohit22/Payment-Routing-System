@@ -9,9 +9,9 @@
 }
 
 .payment-modal__card {
-  width: min(54rem, 100%);
+  width: min(52rem, 100%);
   max-height: calc(100vh - 2.5rem);
-  overflow: auto;
+  overflow-y: auto;
   padding: 1rem;
 }
 
@@ -21,6 +21,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+/* CUSTOMER SECTION */
 .payment-modal__fieldset {
   grid-column: 1 / -1;
   display: grid;
@@ -38,21 +39,44 @@
   color: var(--text-primary);
 }
 
+/* ACTION BUTTONS */
 .payment-modal__actions {
   grid-column: 1 / -1;
   display: flex;
   justify-content: flex-end;
   gap: 0.65rem;
-  margin-top: 0.25rem;
+  margin-top: 0.5rem;
 }
 
+/* READONLY FIELD */
+.field--readonly {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.readonly-value {
+  min-height: 2.5rem;
+  display: flex;
+  align-items: center;
+  padding: 0 0.85rem;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-control);
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+}
+
+/* RESPONSIVE */
 @media (max-width: 820px) {
-  .payment-modal__form,
+  .payment-modal__form {
+    grid-template-columns: 1fr;
+  }
+
   .payment-modal__fieldset {
     grid-template-columns: 1fr;
   }
 
   .payment-modal__actions {
     flex-direction: column-reverse;
+    align-items: stretch;
   }
 }

@@ -1,8 +1,8 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { forkJoin, Observable, of } from 'rxjs';
-import { map, switchMap, tap } from 'rxjs/operators';
-import { API_ROOT, INITIAL_PAGE_FETCH_SIZE } from '../constants/app.constants';
+import { forkJoin, map, Observable, of, switchMap, tap } from 'rxjs';
+
+import { API_ROOT } from '../constants/app.constants';
 import { ApiResponse } from '../models/api.models';
 import {
   PaginatedPaymentsResponse,
@@ -22,10 +22,11 @@ export class PaymentsService {
 
   readonly cachedPayments = this.paymentsCache.asReadonly();
 
-  fetchAllPayments(
-    forceRefresh = false,
-    pageSize = INITIAL_PAGE_FETCH_SIZE,
-  ): Observable<PaymentRecord[]> {
+  fetchPayments(page: number, limit: number): Observable<PaginatedPaymentsResponse> {
+    return this.fetchPaymentsPage(page, limit);
+  }
+
+  fetchAllPayments(forceRefresh = false, pageSize = 50): Observable<PaymentRecord[]> {
     const cached = this.paymentsCache();
 
     if (!forceRefresh && cached) {
@@ -41,24 +42,24 @@ export class PaymentsService {
         }
 
         const requests = Array.from({ length: totalPages - 1 }, (_, index) =>
-          this.fetchPaymentsPage(index + 2, pageSize),
+          this.fetchPaymentsPage(index + 2, pageSize)
         );
 
         return forkJoin(requests).pipe(
-          map((remainingPages) => [firstPage, ...remainingPages].flatMap((page) => page.payments)),
+          map((remainingPages) =>
+            [firstPage, ...remainingPages].flatMap((pageResult) => pageResult.payments)
+          )
         );
       }),
       tap((payments) => this.paymentsCache.set(payments)),
-      map((payments) => [...payments]),
+      map((payments) => [...payments])
     );
   }
 
   fetchPaymentsByStatus(status: string): Observable<PaymentRecord[]> {
-    return this.http
-      .get<
-        ApiResponse<PaymentRecord[]>
-      >(`${API_ROOT}/payments/status/${encodeURIComponent(status)}`)
-      .pipe(map((response) => response.data ?? []));
+    return this.fetchAllPayments().pipe(
+      map((payments) => payments.filter((payment) => payment.status === status))
+    );
   }
 
   createPayment(payload: PaymentUpsertPayload): Observable<ApiResponse<unknown>> {
@@ -69,20 +70,17 @@ export class PaymentsService {
       .pipe(tap(() => this.invalidateCache()));
   }
 
-  updatePayment(
-    paymentId: string,
-    payload: PaymentUpsertPayload,
-  ): Observable<ApiResponse<unknown>> {
+  updatePayment(id: string, payload: PaymentUpsertPayload): Observable<ApiResponse<unknown>> {
     return this.http
-      .put<ApiResponse<unknown>>(`${API_ROOT}/payments/${paymentId}`, this.toFormBody(payload), {
+      .put<ApiResponse<unknown>>(`${API_ROOT}/payments/${id}`, this.toFormBody(payload), {
         headers: this.formHeaders,
       })
       .pipe(tap(() => this.invalidateCache()));
   }
 
-  deletePayment(paymentId: string): Observable<ApiResponse<unknown>> {
+  deletePayment(id: string): Observable<ApiResponse<unknown>> {
     return this.http
-      .delete<ApiResponse<unknown>>(`${API_ROOT}/payments/${paymentId}`)
+      .delete<ApiResponse<unknown>>(`${API_ROOT}/payments/${id}`)
       .pipe(tap(() => this.invalidateCache()));
   }
 
@@ -93,10 +91,7 @@ export class PaymentsService {
   private fetchPaymentsPage(page: number, limit: number): Observable<PaginatedPaymentsResponse> {
     return this.http
       .get<ApiResponse<PaginatedPaymentsResponse>>(`${API_ROOT}/payments`, {
-        params: {
-          page,
-          limit,
-        },
+        params: { page, limit },
       })
       .pipe(
         map((response) => response.data),
@@ -105,12 +100,13 @@ export class PaymentsService {
           page: data?.page ?? page,
           limit: data?.limit ?? limit,
           total: data?.total ?? 0,
-        })),
+        }))
       );
   }
 
   private toFormBody(payload: PaymentUpsertPayload): string {
     const body = new URLSearchParams();
+
     body.set('merchant', payload.merchant.trim());
     body.set('payment_type', payload.paymentType.trim());
     body.set('amount_minor', String(payload.amountMinor));
@@ -123,7 +119,7 @@ export class PaymentsService {
         name: payload.customerDetails.name?.trim() ?? '',
         email: payload.customerDetails.email?.trim() ?? '',
         country: payload.customerDetails.country?.trim() ?? '',
-      }),
+      })
     );
 
     if (payload.providerAttempts) {
