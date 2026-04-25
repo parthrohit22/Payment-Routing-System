@@ -7,7 +7,7 @@ users_data = [
     {"email": "arjun@payments.com", "password": "pass123", "role": "merchant"},
     {"email": "honey@payments.com", "password": "pass123", "role": "merchant"},
     {"email": "parth@payments.com", "password": "admin123", "role": "admin"},
-    {"email": "montu@payments.com", "password": "finance123", "role": "finance"}
+    {"email": "vishnu@payments.com", "password": "finance123", "role": "finance"}
 ]
 
 clean_users = []

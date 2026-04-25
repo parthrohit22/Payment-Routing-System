@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timedelta, timezone
 
 import jwt
-from flask import jsonify, make_response, request
+from flask import jsonify, make_response, request, g
 
 JWT_SECRET = os.getenv("JWT_SECRET", "payment-routing-secret")
 JWT_ALGORITHM = "HS256"
@@ -10,9 +10,7 @@ JWT_EXPIRY_MINUTES = int(os.getenv("JWT_EXPIRY_MINUTES", "60"))
 
 
 def api_response(data=None, message=None, status=200):
-    response = {
-        "status": status
-    }
+    response = {"status": status}
 
     if message:
         response["message"] = message
@@ -25,11 +23,12 @@ def api_response(data=None, message=None, status=200):
 
 def generate_jwt(email, role):
     now = datetime.now(timezone.utc)
+
     payload = {
         "sub": email,
         "role": role,
         "iat": now,
-        "exp": now + timedelta(minutes=JWT_EXPIRY_MINUTES)
+        "exp": now + timedelta(minutes=JWT_EXPIRY_MINUTES),
     }
 
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
@@ -42,30 +41,35 @@ def decode_jwt(token):
 def get_request_identity():
     auth_header = request.headers.get("Authorization", "")
 
+    # ✅ JWT FIRST
     if auth_header.startswith("Bearer "):
         token = auth_header.split(" ", 1)[1].strip()
 
         if not token:
-            return None, api_response(message="Missing bearer token", status=401)
+            return None, api_response(message="Missing token", status=401)
 
         try:
             payload = decode_jwt(token)
+
             return {
                 "email": payload.get("sub"),
-                "role": payload.get("role")
+                "role": (payload.get("role") or "").lower(),
             }, None
+
         except jwt.ExpiredSignatureError:
             return None, api_response(message="Token expired", status=401)
+
         except jwt.InvalidTokenError:
             return None, api_response(message="Invalid token", status=401)
 
+    # ⚠️ fallback (dev only)
     role = request.headers.get("Role")
     if role:
-        return {"email": None, "role": role}, None
+        return {"email": None, "role": role.lower()}, None
 
     return None, api_response(
-        message="Authorization token or Role header is required",
-        status=403
+        message="Authorization required",
+        status=403,
     )
 
 
@@ -75,9 +79,14 @@ def require_roles(allowed_roles):
     if error:
         return error
 
-    role = (identity.get("role") or "").lower()
+    if not identity:
+        return api_response(message="Unauthorized", status=401)
 
-    if role not in [allowed_role.lower() for allowed_role in allowed_roles]:
+    g.user = identity
+
+    role = identity.get("role", "")
+
+    if role not in [r.lower() for r in allowed_roles]:
         return api_response(message="Access denied", status=403)
 
     return None

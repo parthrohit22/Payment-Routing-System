@@ -1,331 +1,307 @@
 import json
-from flask import Blueprint, request
-from bson.objectid import ObjectId
 from datetime import datetime
+
+from bson.objectid import ObjectId
+from flask import Blueprint, request, g
+
 from db import payments
 from utils import api_response, require_roles
 
 payments_bp = Blueprint("payments_bp", __name__)
 
-
 VALID_CURRENCIES = ["GBP", "USD", "EUR"]
 VALID_ATTEMPT_PROVIDERS = ["Stripe", "PayPal", "Adyen"]
 VALID_ATTEMPT_RESULTS = ["success", "failure"]
+VALID_PAYMENT_STATUS = ["success", "pending", "failed"]
+
+def build_query():
+    query = {}
+
+
+    if g.user["role"] == "merchant":
+        query["created_by"] = g.user["email"]
+
+
+    status = request.args.get("status")
+    if status in VALID_PAYMENT_STATUS:
+        query["status"] = status
+
+  
+    date_from = request.args.get("from")
+    date_to = request.args.get("to")
+
+    if date_from or date_to:
+        query["initiated_at"] = {}
+
+        if date_from:
+            query["initiated_at"]["$gte"] = date_from
+
+        if date_to:
+            query["initiated_at"]["$lte"] = date_to
+
+    return query
+
+
+def parse_json_field(field_name):
+    raw = request.form.get(field_name)
+    if not raw:
+        return None, None
+    try:
+        return json.loads(raw), None
+    except:
+        return None, api_response(message=f"Invalid {field_name} JSON", status=400)
 
 
 def parse_customer_details():
-    raw_customer_details = request.form.get("customer_details")
-    if raw_customer_details is not None:
-        try:
-            customer_details = json.loads(raw_customer_details)
-        except json.JSONDecodeError:
-            return None, api_response(message="Invalid customer_details JSON", status=400)
+    data, err = parse_json_field("customer_details")
+    if err:
+        return None, err
 
-        if not isinstance(customer_details, dict):
-            return None, api_response(message="customer_details must be an object", status=400)
+    if data:
+        if not isinstance(data, dict):
+            return None, api_response(message="customer_details must be object", status=400)
 
         return {
-            "name": str(customer_details.get("name", "")).strip(),
-            "email": str(customer_details.get("email", "")).strip(),
-            "country": str(customer_details.get("country", "")).strip()
+            "name": str(data.get("name", "")).strip(),
+            "email": str(data.get("email", "")).strip(),
+            "country": str(data.get("country", "")).strip(),
         }, None
 
     return {
         "name": request.form.get("customer_name", "").strip(),
         "email": request.form.get("customer_email", "").strip(),
-        "country": request.form.get("customer_country", "").strip()
+        "country": request.form.get("customer_country", "").strip(),
     }, None
 
 
 def parse_provider_attempts():
-    raw_provider_attempts = request.form.get("provider_attempts")
-    if raw_provider_attempts is None:
+    data, err = parse_json_field("provider_attempts")
+    if err:
+        return None, err
+
+    if data is None:
         return None, None
 
-    try:
-        provider_attempts = json.loads(raw_provider_attempts)
-    except json.JSONDecodeError:
-        return None, api_response(message="Invalid provider_attempts JSON", status=400)
+    if not isinstance(data, list):
+        return None, api_response(message="provider_attempts must be array", status=400)
 
-    if not isinstance(provider_attempts, list):
-        return None, api_response(message="provider_attempts must be an array", status=400)
+    parsed = []
 
-    parsed_attempts = []
-    for attempt in provider_attempts:
+    for attempt in data:
         if not isinstance(attempt, dict):
-            return None, api_response(message="Each provider attempt must be an object", status=400)
+            return None, api_response(message="Invalid provider attempt", status=400)
 
-        provider = str(attempt.get("provider", "")).strip()
-        result = str(attempt.get("result", "")).strip()
-        latency_ms = attempt.get("latency_ms")
+        provider = attempt.get("provider")
+        result = attempt.get("result")
+        latency = attempt.get("latency_ms")
 
         if provider not in VALID_ATTEMPT_PROVIDERS:
             return None, api_response(message="Invalid provider", status=400)
 
         if result not in VALID_ATTEMPT_RESULTS:
-            return None, api_response(message="Invalid provider attempt result", status=400)
+            return None, api_response(message="Invalid result", status=400)
 
         try:
-            latency_ms = int(latency_ms)
-        except (TypeError, ValueError):
-            return None, api_response(message="Latency must be a number", status=400)
+            latency = int(latency)
+            if latency < 0:
+                raise ValueError
+        except:
+            return None, api_response(message="Invalid latency", status=400)
 
-        if latency_ms < 0:
-            return None, api_response(message="Latency must be zero or greater", status=400)
-
-        parsed_attempts.append({
+        parsed.append({
             "provider": provider,
             "result": result,
-            "latency_ms": latency_ms
+            "latency_ms": latency
         })
 
-    return parsed_attempts, None
-
-
+    return parsed, None
 
 @payments_bp.route("/payments", methods=["GET"])
 def get_payments():
-    role_check = require_roles(["admin", "merchant"])
-    if role_check:
-        return role_check
+    err = require_roles(["admin", "merchant", "finance"])
+    if err:
+        return err
 
-    page = int(request.args.get("page", 1))
-    limit = int(request.args.get("limit", 5))
-
+    page = max(1, int(request.args.get("page", 1)))
+    limit = max(1, min(100, int(request.args.get("limit", 5))))
     skip = (page - 1) * limit
-    total = payments.count_documents({})
 
-    result = []
-    for payment in payments.find().skip(skip).limit(limit):
-        payment["_id"] = str(payment["_id"])
-        result.append(payment)
+    query = build_query()
 
-    return api_response(
-        data={
-            "payments": result,
-            "page": page,
-            "limit": limit,
-            "total": total
-        }
-    )
+    total = payments.count_documents(query)
+
+    items = []
+    for doc in payments.find(query).skip(skip).limit(limit):
+        doc["_id"] = str(doc["_id"])
+        items.append(doc)
+
+    return api_response(data={
+        "payments": items,
+        "page": page,
+        "limit": limit,
+        "total": total
+    })
 
 
 @payments_bp.route("/payments", methods=["POST"])
 def add_payment():
-    role_check = require_roles(["admin", "merchant"])
-    if role_check:
-        return role_check
+    err = require_roles(["admin", "merchant"])
+    if err:
+        return err
+
+    email = g.user["email"]
 
     merchant = request.form.get("merchant")
     payment_type = request.form.get("payment_type")
-    amount_minor = request.form.get("amount_minor")
     currency = request.form.get("currency")
     region = request.form.get("region")
-    status = request.form.get("status")
-
-   
-    if not merchant or not payment_type or not amount_minor or not currency or not region or not status:
-        return api_response(message="Missing required fields", status=400)
 
     try:
-        amount_minor = int(amount_minor)
+        amount = int(request.form.get("amount_minor", 0))
+        if amount <= 0:
+            raise ValueError
     except:
-        return api_response(message="Amount must be a number", status=400)
+        return api_response(message="Invalid amount", status=400)
+
+    if not all([merchant, payment_type, currency, region]):
+        return api_response(message="Missing fields", status=400)
 
     if currency not in VALID_CURRENCIES:
         return api_response(message="Invalid currency", status=400)
 
-    customer_details, customer_error = parse_customer_details()
-    if customer_error:
-        return customer_error
+    customer, err = parse_customer_details()
+    if err:
+        return err
 
-    provider_attempts, attempts_error = parse_provider_attempts()
-    if attempts_error:
-        return attempts_error
+    attempts, err = parse_provider_attempts()
+    if err:
+        return err
 
-    new_payment = {
-        "merchant": merchant,
-        "payment_type": payment_type,
-        "amount_minor": amount_minor,
+    payments.insert_one({
+        "merchant": merchant.strip(),
+        "payment_type": payment_type.strip(),
+        "amount_minor": amount,
         "currency": currency,
-        "region": region,
+        "region": region.strip(),
+        "status": "pending",
+        "created_by": email,
         "initiated_at": datetime.utcnow().isoformat(),
-        "status": status,
-        "customer_details": customer_details,
-        "provider_attempts": provider_attempts or []
-    }
+        "customer_details": customer,
+        "provider_attempts": attempts or []
+    })
 
-    payments.insert_one(new_payment)
-
-    return api_response(message="Payment added", status=201)
-
+    return api_response(message="Payment created", status=201)
 
 
 @payments_bp.route("/payments/<id>", methods=["PUT"])
 def update_payment(id):
-    role_check = require_roles(["admin"])
-    if role_check:
-        return role_check
+    err = require_roles(["admin", "finance"])
+    if err:
+        return err
 
     try:
-        payment_id = ObjectId(id)
+        oid = ObjectId(id)
     except:
-        return api_response(message="Invalid payment ID", status=400)
+        return api_response(message="Invalid ID", status=400)
 
-    merchant = request.form.get("merchant")
-    payment_type = request.form.get("payment_type")
-    amount_minor = request.form.get("amount_minor")
-    currency = request.form.get("currency")
-    region = request.form.get("region")
-    status = request.form.get("status")
+    update = {}
 
+    if "status" in request.form:
+        status = request.form.get("status")
+        if status not in VALID_PAYMENT_STATUS:
+            return api_response(message="Invalid status", status=400)
+        update["status"] = status
 
-    updated_payment = {}
+    attempts, err = parse_provider_attempts()
+    if err:
+        return err
 
-    if merchant:
-        updated_payment["merchant"] = merchant
+    if attempts is not None:
+        existing = payments.find_one({"_id": oid}, {"provider_attempts": 1})
+        current = existing.get("provider_attempts", []) if existing else []
+        update["provider_attempts"] = current + attempts
 
-    if payment_type:
-        updated_payment["payment_type"] = payment_type
+    if not update:
+        return api_response(message="No fields to update", status=400)
 
-    if amount_minor:
-        try:
-            updated_payment["amount_minor"] = int(amount_minor)
-        except:
-            return api_response(message="Amount must be a number", status=400)
+    res = payments.update_one({"_id": oid}, {"$set": update})
 
-    if currency:
-        if currency not in VALID_CURRENCIES:
-            return api_response(message="Invalid currency", status=400)
-        updated_payment["currency"] = currency
+    if res.matched_count == 0:
+        return api_response(message="Not found", status=404)
 
-    if region:
-        updated_payment["region"] = region
-
-    if status:
-        updated_payment["status"] = status
-
-    if "customer_details" in request.form or any(
-        field in request.form
-        for field in ["customer_name", "customer_email", "customer_country"]
-    ):
-        customer_details, customer_error = parse_customer_details()
-        if customer_error:
-            return customer_error
-        updated_payment["customer_details"] = customer_details
-
-    if "provider_attempts" in request.form:
-        provider_attempts, attempts_error = parse_provider_attempts()
-        if attempts_error:
-            return attempts_error
-        updated_payment["provider_attempts"] = provider_attempts
-
-    if not updated_payment:
-        return api_response(message="No update fields provided", status=400)
-
-    result = payments.update_one(
-        {"_id": payment_id},
-        {"$set": updated_payment}
-    )
-
-    if result.matched_count == 0:
-        return api_response(message="Payment not found", status=404)
-
-    return api_response(message="Payment updated successfully")
-
+    return api_response(message="Updated")
 
 
 @payments_bp.route("/payments/<id>", methods=["DELETE"])
 def delete_payment(id):
-
-    role_check = require_roles(["admin"])
-    if role_check:
-        return role_check
+    err = require_roles(["admin"])
+    if err:
+        return err
 
     try:
-        payment_id = ObjectId(id)
+        oid = ObjectId(id)
     except:
-        return api_response(message="Invalid payment ID", status=400)
+        return api_response(message="Invalid ID", status=400)
 
-    result = payments.delete_one({"_id": payment_id})
+    res = payments.delete_one({"_id": oid})
 
-    if result.deleted_count == 0:
-        return api_response(message="Payment not found", status=404)
+    if res.deleted_count == 0:
+        return api_response(message="Not found", status=404)
 
-    return api_response(message="Payment deleted successfully")
-
-
-
-@payments_bp.route("/payments/status/<status>", methods=["GET"])
-def get_payments_by_status(status):
-    role_check = require_roles(["admin", "merchant"])
-    if role_check:
-        return role_check
-
-    result = []
-    for payment in payments.find({"status": status}):
-        payment["_id"] = str(payment["_id"])
-        result.append(payment)
-
-    return api_response(data=result)
-
+    return api_response(message="Deleted")
 
 @payments_bp.route("/analytics/payment-volume", methods=["GET"])
 def payment_volume():
+    err = require_roles(["admin", "finance", "merchant"])
+    if err:
+        return err
 
-    role_check = require_roles(["admin", "finance"])
-    if role_check:
-        return role_check
+    match = build_query()
 
-    pipeline = [
+    result = list(payments.aggregate([
+        {"$match": match},
         {"$group": {"_id": "$currency", "total_volume": {"$sum": "$amount_minor"}}},
         {"$project": {"_id": 0, "currency": "$_id", "total_volume": 1}}
-    ]
+    ]))
 
-    result = list(payments.aggregate(pipeline))
     return api_response(data=result)
-
 
 
 @payments_bp.route("/analytics/provider-latency", methods=["GET"])
 def provider_latency():
+    err = require_roles(["admin", "finance", "merchant"])
+    if err:
+        return err
 
-    role_check = require_roles(["admin", "finance"])
-    if role_check:
-        return role_check
+    match = build_query()
 
-    pipeline = [
+    result = list(payments.aggregate([
+        {"$match": match},
         {"$unwind": "$provider_attempts"},
         {
             "$group": {
                 "_id": "$provider_attempts.provider",
-                "avg_latency": {"$avg": "$provider_attempts.latency_ms"}
+                "average_latency_ms": {"$avg": "$provider_attempts.latency_ms"}
             }
         },
-        {
-            "$project": {
-                "_id": 0,
-                "provider": "$_id",
-                "average_latency_ms": "$avg_latency"
-            }
-        }
-    ]
+        {"$project": {"_id": 0, "provider": "$_id", "average_latency_ms": 1}}
+    ]))
 
-    result = list(payments.aggregate(pipeline))
     return api_response(data=result)
 
 
 @payments_bp.route("/analytics/payment-status", methods=["GET"])
 def payment_status():
+    err = require_roles(["admin", "finance", "merchant"])
+    if err:
+        return err
 
-    role_check = require_roles(["admin", "finance"])
-    if role_check:
-        return role_check
+    match = build_query()
 
-    pipeline = [
+    result = list(payments.aggregate([
+        {"$match": match},
         {"$group": {"_id": "$status", "count": {"$sum": 1}}},
         {"$project": {"_id": 0, "status": "$_id", "count": 1}}
-    ]
+    ]))
 
-    result = list(payments.aggregate(pipeline))
     return api_response(data=result)
