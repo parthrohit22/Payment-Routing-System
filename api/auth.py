@@ -1,6 +1,6 @@
 from flask import Blueprint, request
 from db import users
-from utils import api_response
+from utils import api_response, generate_jwt
 import bcrypt
 
 auth_bp = Blueprint("auth_bp", __name__)
@@ -70,7 +70,8 @@ def login():
     return api_response(
         data={
             "email": user["email"],
-            "role": user["role"]
+            "role": user["role"],
+            "token": generate_jwt(user["email"], user["role"])
         },
         message="Login successful",
         status=200
