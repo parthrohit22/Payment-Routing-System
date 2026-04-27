@@ -1,58 +1,112 @@
 <main class="auth-page">
-  <section class="auth-form-card panel">
-
-    <div class="auth-form-card__heading">
-      <h1>Payment Routing System</h1>
-      <p>Secure access to the routing workspace</p>
+  <section class="auth-page__stage">
+    <div class="auth-page__brand-row">
+      <div class="auth-page__mark">PRS</div>
+      <span>Payment Routing System</span>
     </div>
 
-    <form class="field-group" [formGroup]="loginForm" (ngSubmit)="submit()">
+    <div class="auth-page__content">
+      <section class="auth-page__context" aria-label="Payment Routing System overview">
+        <div class="auth-page__context-copy">
+          <p class="auth-page__eyebrow">Intelligent payment orchestration</p>
+          <h1>Payment Routing System</h1>
+          <p>
+            A high-performance payment orchestration platform designed to route transactions
+            intelligently across multiple providers for speed, reliability, and resilience.
+          </p>
 
-      <div class="field">
-        <label for="login-email">Email</label>
-        <input
-          id="login-email"
-          type="email"
-          formControlName="email"
-          autocomplete="email"
-        />
-        @if (loginForm.controls.email.touched && loginForm.controls.email.invalid) {
-          <p class="field__error">Enter a valid email.</p>
-        }
-      </div>
+          <ul>
+            <li>Automatically selects optimal providers based on latency and success performance</li>
+            <li>Enables seamless failover across providers to maximise transaction success rates</li>
+            <li>Provides operational control and visibility across the full payment lifecycle</li>
+          </ul>
+        </div>
 
-      <div class="field">
-        <label for="login-password">Password</label>
-        <input
-          id="login-password"
-          type="password"
-          formControlName="password"
-          autocomplete="current-password"
-        />
-        @if (loginForm.controls.password.touched && loginForm.controls.password.invalid) {
-          <p class="field__error">Password is required.</p>
-        }
-      </div>
+        <div class="auth-page__insight-panel" aria-hidden="true">
+          <div class="auth-page__insight-row">
+            <span>Route decision</span>
+            <strong>42ms</strong>
+          </div>
+          <div class="auth-page__route-map">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div class="auth-page__metric-grid">
+            <div>
+              <strong>99.4%</strong>
+              <span>Success</span>
+            </div>
+            <div>
+              <strong>3</strong>
+              <span>Providers</span>
+            </div>
+            <div>
+              <strong>24/7</strong>
+              <span>Visibility</span>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      @if (errorMessage()) {
-        <p class="field__error">{{ errorMessage() }}</p>
-      }
+      <section class="auth-page__form-column">
+        <section class="auth-form-card panel">
 
-      <button
-        type="submit"
-        class="button button--primary"
-        [class.is-loading]="isSubmitting()"
-        [disabled]="isSubmitting()"
-      >
-        {{ isSubmitting() ? 'Signing in...' : 'Sign in' }}
-      </button>
+          <div class="auth-form-card__heading">
+            <h1>Payment Routing System</h1>
+            <p>Secure access to the routing workspace</p>
+          </div>
 
-    </form>
+          <form class="field-group" [formGroup]="loginForm" (ngSubmit)="submit()">
 
-    <p class="auth-form-card__footer">
-      Don’t have an account?
-      <a routerLink="/register">Register</a>
-    </p>
+            <div class="field">
+              <label for="login-email">Email</label>
+              <input
+                id="login-email"
+                type="email"
+                formControlName="email"
+                autocomplete="email"
+              />
+              @if (loginForm.controls.email.touched && loginForm.controls.email.invalid) {
+                <p class="field__error">Enter a valid email.</p>
+              }
+            </div>
 
+            <div class="field">
+              <label for="login-password">Password</label>
+              <input
+                id="login-password"
+                type="password"
+                formControlName="password"
+                autocomplete="current-password"
+              />
+              @if (loginForm.controls.password.touched && loginForm.controls.password.invalid) {
+                <p class="field__error">Password is required.</p>
+              }
+            </div>
+
+            @if (errorMessage()) {
+              <p class="field__error">{{ errorMessage() }}</p>
+            }
+
+            <button
+              type="submit"
+              class="button button--primary"
+              [class.is-loading]="isSubmitting()"
+              [disabled]="isSubmitting()"
+            >
+              {{ isSubmitting() ? 'Signing in...' : 'Sign in' }}
+            </button>
+
+          </form>
+
+          <p class="auth-form-card__footer">
+            Don’t have an account?
+            <a routerLink="/register">Register</a>
+          </p>
+
+        </section>
+      </section>
+    </div>
   </section>
 </main>

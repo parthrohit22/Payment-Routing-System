@@ -1,46 +1,100 @@
 <main class="auth-page">
-  <section class="auth-form-card panel">
-    <div class="auth-form-card__heading">
-      <h1>Create account</h1>
-      <p>Merchant access</p>
+  <section class="auth-page__stage">
+    <div class="auth-page__brand-row">
+      <div class="auth-page__mark">PRS</div>
+      <span>Payment Routing System</span>
     </div>
 
-    <form class="field-group" [formGroup]="registerForm" (ngSubmit)="submit()">
-      <div class="field">
-        <label for="register-email">Email</label>
-        <input id="register-email" type="email" formControlName="email" />
-        @if (registerForm.controls.email.touched && registerForm.controls.email.invalid) {
-          <p class="field__error">Enter a valid email.</p>
-        }
-      </div>
+    <div class="auth-page__content">
+      <section class="auth-page__context" aria-label="Payment Routing System overview">
+        <div class="auth-page__context-copy">
+          <p class="auth-page__eyebrow">Intelligent payment orchestration</p>
+          <h1>Payment Routing System</h1>
+          <p>
+            A high-performance payment orchestration platform designed to route transactions
+            intelligently across multiple providers for speed, reliability, and resilience.
+          </p>
 
-      <div class="field">
-        <label for="register-password">Password</label>
-        <input id="register-password" type="password" formControlName="password" />
-        @if (registerForm.controls.password.touched && registerForm.controls.password.invalid) {
-          <p class="field__error">Use at least 6 characters.</p>
-        }
-      </div>
+          <ul>
+            <li>Automatically selects optimal providers based on latency and success performance</li>
+            <li>Enables seamless failover across providers to maximise transaction success rates</li>
+            <li>Provides operational control and visibility across the full payment lifecycle</li>
+          </ul>
+        </div>
 
-      <div class="field">
-        <label for="register-role">Role</label>
-        <select id="register-role" formControlName="role">
-          <option value="merchant">merchant</option>
-        </select>
-      </div>
+        <div class="auth-page__insight-panel" aria-hidden="true">
+          <div class="auth-page__insight-row">
+            <span>Route decision</span>
+            <strong>42ms</strong>
+          </div>
+          <div class="auth-page__route-map">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div class="auth-page__metric-grid">
+            <div>
+              <strong>99.4%</strong>
+              <span>Success</span>
+            </div>
+            <div>
+              <strong>3</strong>
+              <span>Providers</span>
+            </div>
+            <div>
+              <strong>24/7</strong>
+              <span>Visibility</span>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      @if (errorMessage()) {
-        <p class="field__error">{{ errorMessage() }}</p>
-      }
+      <section class="auth-page__form-column">
+        <section class="auth-form-card panel">
+          <div class="auth-form-card__heading">
+            <h1>Create account</h1>
+            <p>Merchant access</p>
+          </div>
 
-      <button type="submit" class="button button--primary" [disabled]="isSubmitting()">
-        {{ isSubmitting() ? 'Creating account...' : 'Create account' }}
-      </button>
-    </form>
+          <form class="field-group" [formGroup]="registerForm" (ngSubmit)="submit()">
+            <div class="field">
+              <label for="register-email">Email</label>
+              <input id="register-email" type="email" formControlName="email" />
+              @if (registerForm.controls.email.touched && registerForm.controls.email.invalid) {
+                <p class="field__error">Enter a valid email.</p>
+              }
+            </div>
 
-    <p class="auth-form-card__footer">
-      Already have an account?
-      <a routerLink="/login">Sign in</a>
-    </p>
+            <div class="field">
+              <label for="register-password">Password</label>
+              <input id="register-password" type="password" formControlName="password" />
+              @if (registerForm.controls.password.touched && registerForm.controls.password.invalid) {
+                <p class="field__error">Use at least 6 characters.</p>
+              }
+            </div>
+
+            <div class="field">
+              <label for="register-role">Role</label>
+              <select id="register-role" formControlName="role">
+                <option value="merchant">merchant</option>
+              </select>
+            </div>
+
+            @if (errorMessage()) {
+              <p class="field__error">{{ errorMessage() }}</p>
+            }
+
+            <button type="submit" class="button button--primary" [disabled]="isSubmitting()">
+              {{ isSubmitting() ? 'Creating account...' : 'Create account' }}
+            </button>
+          </form>
+
+          <p class="auth-form-card__footer">
+            Already have an account?
+            <a routerLink="/login">Sign in</a>
+          </p>
+        </section>
+      </section>
+    </div>
   </section>
 </main>
