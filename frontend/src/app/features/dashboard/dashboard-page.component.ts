@@ -4,7 +4,7 @@ import { CurrencyPipe, DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs/operators';
 
-import { PaymentRecord, PaginatedPaymentsResponse } from '../../core/models/payment.models';
+import { PaymentRecord } from '../../core/models/payment.models';
 import { AuthService } from '../../core/services/auth.service';
 import { PaymentsService } from '../../core/services/payments.service';
 
@@ -81,14 +81,14 @@ export class DashboardPageComponent {
     this.errorMessage.set('');
 
     this.paymentsService
-      .fetchPayments(1, 100)
+      .fetchAllPayments()
       .pipe(
         finalize(() => this.isLoading.set(false)),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
-        next: (res: PaginatedPaymentsResponse) => {
-          this.payments.set(res.payments);
+        next: (payments) => {
+          this.payments.set(payments);
         },
         error: (err: any) => {
           this.errorMessage.set(
