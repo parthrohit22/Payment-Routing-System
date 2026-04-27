@@ -1,4 +1,4 @@
-import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
 import { CurrencyPipe, DatePipe, TitleCasePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs/operators';
@@ -14,6 +14,7 @@ import { PaymentDetailPanelComponent } from './payment-detail-panel.component';
 import { PaymentFormModalComponent } from './payment-form-modal.component';
 
 type PaymentStatusFilter = 'all' | 'success' | 'pending' | 'failed';
+type SortDirection = 'asc' | 'desc';
 
 @Component({
   selector: 'app-payments-page',
@@ -50,6 +51,7 @@ export class PaymentsPageComponent {
   protected readonly statusFilter = signal<PaymentStatusFilter>('all');
   protected readonly regionFilter = signal('all');
   protected readonly currencyFilter = signal('all');
+  protected readonly sortDirection = signal<SortDirection>('desc');
   protected readonly currentPage = signal(1);
   protected readonly pageSize = 8;
 
@@ -98,14 +100,23 @@ export class PaymentsPageComponent {
     });
   });
 
+  protected readonly sortedPayments = computed(() =>
+    [...this.filteredPayments()].sort((firstPayment, secondPayment) => {
+      const firstDate = new Date(firstPayment.initiated_at).getTime();
+      const secondDate = new Date(secondPayment.initiated_at).getTime();
+
+      return this.sortDirection() === 'desc' ? secondDate - firstDate : firstDate - secondDate;
+    })
+  );
+
   protected readonly totalPages = computed(() =>
-    Math.max(1, Math.ceil(this.filteredPayments().length / this.pageSize))
+    Math.max(1, Math.ceil(this.sortedPayments().length / this.pageSize))
   );
 
   protected readonly pagedPayments = computed(() => {
     const page = Math.min(this.currentPage(), this.totalPages());
     const startIndex = (page - 1) * this.pageSize;
-    return this.filteredPayments().slice(startIndex, startIndex + this.pageSize);
+    return this.sortedPayments().slice(startIndex, startIndex + this.pageSize);
   });
 
   constructor() {
@@ -113,6 +124,7 @@ export class PaymentsPageComponent {
 
     effect(() => {
       this.filteredPayments();
+      this.sortedPayments();
       this.syncSelectedPayment();
     });
   }
@@ -137,11 +149,17 @@ export class PaymentsPageComponent {
     this.currentPage.set(1);
   }
 
+  protected toggleSortDirection(): void {
+    this.sortDirection.update((direction) => (direction === 'desc' ? 'asc' : 'desc'));
+    this.currentPage.set(1);
+  }
+
   protected resetFilters(): void {
     this.searchTerm.set('');
     this.statusFilter.set('all');
     this.regionFilter.set('all');
     this.currencyFilter.set('all');
+    this.sortDirection.set('desc');
     this.currentPage.set(1);
   }
 
@@ -346,28 +364,27 @@ export class PaymentsPageComponent {
 
   private syncSelectedPayment(): void {
     const visiblePayments = this.filteredPayments();
-    const totalPages = Math.max(1, Math.ceil(visiblePayments.length / this.pageSize));
+    const totalPages = Math.max(1, Math.ceil(this.sortedPayments().length / this.pageSize));
 
     if (this.currentPage() > totalPages) {
       this.currentPage.set(totalPages);
     }
 
-    const pageItems = this.pagedPayments();
-    const currentSelection = this.selectedPayment();
+    const currentSelection = untracked(() => this.selectedPayment());
 
-    if (!pageItems.length) {
+    if (!visiblePayments.length) {
       this.selectedPayment.set(null);
       return;
     }
 
     if (!currentSelection) {
-      this.selectedPayment.set(pageItems[0]);
+      this.selectedPayment.set(this.pagedPayments()[0] ?? null);
       return;
     }
 
     const visibleSelection = visiblePayments.find((payment) => payment._id === currentSelection._id);
     if (!visibleSelection) {
-      this.selectedPayment.set(pageItems[0]);
+      this.selectedPayment.set(null);
       return;
     }
 

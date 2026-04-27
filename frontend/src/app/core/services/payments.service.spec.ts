@@ -2,14 +2,31 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { PaymentsService } from './payments.service';
+import { AuthService } from './auth.service';
 
 describe('PaymentsService', () => {
   let service: PaymentsService;
   let httpController: HttpTestingController;
+  let authService: {
+    role: ReturnType<typeof vi.fn>;
+    email: ReturnType<typeof vi.fn>;
+    token: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
+    authService = {
+      role: vi.fn().mockReturnValue('admin'),
+      email: vi.fn().mockReturnValue('admin@test.com'),
+      token: vi.fn().mockReturnValue('admin-token'),
+    };
+
     TestBed.configureTestingModule({
-      providers: [PaymentsService, provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        PaymentsService,
+        { provide: AuthService, useValue: authService },
+        provideHttpClient(),
+        provideHttpClientTesting(),
+      ],
     });
 
     service = TestBed.inject(PaymentsService);
@@ -195,5 +212,56 @@ describe('PaymentsService', () => {
     });
 
     expect(statuses).toEqual(['success']);
+  });
+
+  it('does not reuse cached payments across authenticated users', () => {
+    let adminPayments = 0;
+    let merchantPayments = 0;
+
+    service.fetchAllPayments().subscribe((payments) => {
+      adminPayments = payments.length;
+    });
+
+    httpController.expectOne('/api/payments?page=1&limit=50').flush({
+      data: {
+        payments: [
+          {
+            _id: '1',
+            merchant: 'Amazon',
+            payment_type: 'card_payment',
+            amount_minor: 1000,
+            currency: 'GBP',
+            region: 'UK',
+            initiated_at: '2026-01-01T10:00:00',
+            status: 'success',
+            customer_details: {},
+            provider_attempts: [],
+          },
+        ],
+        page: 1,
+        limit: 50,
+        total: 1,
+      },
+    });
+
+    authService.role.mockReturnValue('merchant');
+    authService.email.mockReturnValue('merchant@test.com');
+    authService.token.mockReturnValue('merchant-token');
+
+    service.fetchAllPayments().subscribe((payments) => {
+      merchantPayments = payments.length;
+    });
+
+    httpController.expectOne('/api/payments?page=1&limit=50').flush({
+      data: {
+        payments: [],
+        page: 1,
+        limit: 50,
+        total: 0,
+      },
+    });
+
+    expect(adminPayments).toBe(1);
+    expect(merchantPayments).toBe(0);
   });
 });

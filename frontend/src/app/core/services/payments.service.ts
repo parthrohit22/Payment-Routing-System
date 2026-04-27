@@ -9,13 +9,16 @@ import {
   PaymentRecord,
   PaymentUpsertPayload,
 } from '../models/payment.models';
+import { AuthService } from './auth.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class PaymentsService {
   private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
   private readonly paymentsCache = signal<PaymentRecord[] | null>(null);
+  private readonly paymentsCacheKey = signal<string | null>(null);
   private readonly formHeaders = new HttpHeaders({
     'Content-Type': 'application/x-www-form-urlencoded',
   });
@@ -28,8 +31,9 @@ export class PaymentsService {
 
   fetchAllPayments(forceRefresh = false, pageSize = 50): Observable<PaymentRecord[]> {
     const cached = this.paymentsCache();
+    const cacheKey = this.currentCacheKey();
 
-    if (!forceRefresh && cached) {
+    if (!forceRefresh && cached && this.paymentsCacheKey() === cacheKey) {
       return of([...cached]);
     }
 
@@ -51,7 +55,10 @@ export class PaymentsService {
           )
         );
       }),
-      tap((payments) => this.paymentsCache.set(payments)),
+      tap((payments) => {
+        this.paymentsCache.set(payments);
+        this.paymentsCacheKey.set(cacheKey);
+      }),
       map((payments) => [...payments])
     );
   }
@@ -86,6 +93,15 @@ export class PaymentsService {
 
   invalidateCache(): void {
     this.paymentsCache.set(null);
+    this.paymentsCacheKey.set(null);
+  }
+
+  private currentCacheKey(): string {
+    return [
+      this.authService.role() ?? 'anonymous',
+      this.authService.email() ?? 'unknown',
+      this.authService.token() ?? 'no-token',
+    ].join(':');
   }
 
   private fetchPaymentsPage(page: number, limit: number): Observable<PaginatedPaymentsResponse> {

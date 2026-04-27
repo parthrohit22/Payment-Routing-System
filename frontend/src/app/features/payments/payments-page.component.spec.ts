@@ -163,4 +163,95 @@ describe('PaymentsPageComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('Delete payment');
   });
+
+  it('sorts payments newest first by default', () => {
+    const component = fixture.componentInstance as any;
+
+    expect(component.sortDirection()).toBe('desc');
+    expect(component.pagedPayments()[0].merchant).toBe('Airbnb');
+  });
+
+  it('toggles sort direction to oldest first', () => {
+    const component = fixture.componentInstance as any;
+
+    component.toggleSortDirection();
+
+    expect(component.sortDirection()).toBe('asc');
+    expect(component.pagedPayments()[0].merchant).toBe('Spotify');
+  });
+
+  it('sorts filtered payments after applying filters', () => {
+    const component = fixture.componentInstance as any;
+    component.payments.set([
+      ...mockPayments,
+      {
+        _id: '3',
+        merchant: 'Bolt',
+        payment_type: 'ride',
+        amount_minor: 1800,
+        currency: 'GBP',
+        region: 'UK',
+        initiated_at: '2026-01-09T10:00:00',
+        status: 'success',
+        customer_details: {
+          name: 'Mia Stone',
+          email: 'mia@test.com',
+          country: 'UK',
+        },
+        provider_attempts: [],
+      },
+    ]);
+
+    component.onStatusChange('success');
+    fixture.detectChanges();
+
+    expect(component.pagedPayments().map((payment: any) => payment.merchant)).toEqual([
+      'Bolt',
+      'Spotify',
+    ]);
+  });
+
+  it('keeps pagination correct after sorting', () => {
+    const component = fixture.componentInstance as any;
+    component.payments.set(
+      Array.from({ length: 10 }, (_, index) => ({
+        _id: `${index + 1}`,
+        merchant: `Merchant ${index + 1}`,
+        payment_type: 'invoice',
+        amount_minor: 1000 + index,
+        currency: 'GBP',
+        region: 'UK',
+        initiated_at: `2026-01-${String(index + 1).padStart(2, '0')}T10:00:00`,
+        status: 'success',
+        customer_details: {
+          name: `Customer ${index + 1}`,
+          email: `customer${index + 1}@test.com`,
+          country: 'UK',
+        },
+        provider_attempts: [],
+      }))
+    );
+    fixture.detectChanges();
+
+    expect(component.totalPages()).toBe(2);
+    expect(component.pagedPayments()[0].merchant).toBe('Merchant 10');
+
+    component.nextPage();
+
+    expect(component.currentPage()).toBe(2);
+    expect(component.pagedPayments().map((payment: any) => payment.merchant)).toEqual([
+      'Merchant 2',
+      'Merchant 1',
+    ]);
+  });
+
+  it('clears selection when the selected payment is filtered out', () => {
+    const component = fixture.componentInstance as any;
+    component.selectPayment(mockPayments[0]);
+
+    component.onStatusChange('pending');
+    fixture.detectChanges();
+
+    expect(component.selectedPayment()).toBeNull();
+  });
 });

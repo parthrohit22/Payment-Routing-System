@@ -58,7 +58,6 @@ export class PaymentDetailPanelComponent {
     return 'status-pill status-pill--warning';
   }
 
-  // 🔥 FIXED: latency helpers (missing before)
   getLatencyClass(latency: number): string {
     if (latency > 300) return 'latency-critical';
     if (latency > 200) return 'latency-warning';

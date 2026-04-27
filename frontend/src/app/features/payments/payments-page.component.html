@@ -6,7 +6,7 @@
 @if (canViewPayments()) {
   <section class="panel payments-page__toolbar">
     <div class="payments-page__filters">
-      <div class="field">
+      <div class="field payments-page__search">
         <label for="payment-search">Search</label>
         <input
           id="payment-search"
@@ -58,6 +58,17 @@
           }
         </select>
       </div>
+
+      <div class="field">
+        <label>Sort</label>
+        <button
+          type="button"
+          class="button button--secondary payments-page__sort-button"
+          (click)="toggleSortDirection()"
+        >
+          {{ sortDirection() === 'desc' ? 'Newest first' : 'Oldest first' }}
+        </button>
+      </div>
     </div>
 
     <div class="payments-page__toolbar-actions">
@@ -87,7 +98,7 @@
             <div class="payments-page__skeleton-row"></div>
           }
         </div>
-      } @else if (!filteredPayments().length) {
+      } @else if (!sortedPayments().length) {
         <app-empty-state
           title="No payments found"
           message="Adjust filters or create a new payment"
