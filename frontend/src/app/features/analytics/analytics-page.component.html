@@ -37,11 +37,14 @@
           <h2>Volume by currency</h2>
         </div>
 
-        <canvas
-          baseChart
-          [data]="volumeChartData()"
-          [type]="volumeChartType">
-        </canvas>
+        <div class="chart-container">
+          <canvas
+            baseChart
+            [data]="volumeChartData()"
+            [options]="barChartOptions"
+            [type]="volumeChartType">
+          </canvas>
+        </div>
       </section>
 
       <section class="panel analytics-page__section">
@@ -49,11 +52,14 @@
           <h2>Provider latency</h2>
         </div>
 
-        <canvas
-          baseChart
-          [data]="latencyChartData()"
-          [type]="latencyChartType">
-        </canvas>
+        <div class="chart-container">
+          <canvas
+            baseChart
+            [data]="latencyChartData()"
+            [options]="barChartOptions"
+            [type]="latencyChartType">
+          </canvas>
+        </div>
       </section>
     </section>
 
@@ -62,11 +68,14 @@
         <h2>Status distribution</h2>
       </div>
 
-      <canvas
-        baseChart
-        [data]="statusChartData()"
-        [type]="statusChartType">
-      </canvas>
+      <div class="chart-container">
+        <canvas
+          baseChart
+          [data]="statusChartData()"
+          [options]="doughnutChartOptions"
+          [type]="statusChartType">
+        </canvas>
+      </div>
     </section>
   }
 }

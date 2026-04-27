@@ -9,6 +9,21 @@
   display: grid;
   gap: 1rem;
   padding: 1rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.chart-container {
+  position: relative;
+  height: 280px;
+  max-height: 300px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.chart-container canvas {
+  display: block;
+  max-width: 100%;
 }
 
 .analytics-page__rows {

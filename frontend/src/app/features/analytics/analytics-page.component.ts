@@ -2,7 +2,7 @@ import { Component, DestroyRef, computed, effect, inject, signal } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin } from 'rxjs';
 import { finalize } from 'rxjs/operators';
-import { ChartConfiguration, ChartType } from 'chart.js';
+import { ChartConfiguration } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
 
 import {
@@ -63,9 +63,52 @@ export class AnalyticsPageComponent {
     datasets: [],
   });
 
-  protected readonly volumeChartType: ChartType = 'bar';
-  protected readonly latencyChartType: ChartType = 'bar';
-  protected readonly statusChartType: ChartType = 'doughnut';
+  protected readonly volumeChartType = 'bar';
+  protected readonly latencyChartType = 'bar';
+  protected readonly statusChartType = 'doughnut';
+  protected readonly barChartOptions: ChartConfiguration<'bar'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        labels: {
+          color: '#64748b',
+          boxWidth: 12,
+        },
+      },
+    },
+    scales: {
+      x: {
+        grid: {
+          color: '#e2e8f0',
+        },
+        ticks: {
+          color: '#64748b',
+        },
+      },
+      y: {
+        grid: {
+          color: '#e2e8f0',
+        },
+        ticks: {
+          color: '#64748b',
+        },
+      },
+    },
+  };
+  protected readonly doughnutChartOptions: ChartConfiguration<'doughnut'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          color: '#64748b',
+          boxWidth: 12,
+        },
+      },
+    },
+  };
 
   constructor() {
     if (this.hasAccess()) {
@@ -123,7 +166,7 @@ export class AnalyticsPageComponent {
         {
           data: this.paymentVolume().map((metric) => metric.total_volume / 100),
           label: 'Volume',
-          backgroundColor: '#2563eb',
+          backgroundColor: '#3b82f6',
           borderColor: '#2563eb',
           borderWidth: 1,
         },
@@ -136,8 +179,8 @@ export class AnalyticsPageComponent {
         {
           data: this.providerLatency().map((metric) => metric.average_latency_ms),
           label: 'Latency (ms)',
-          backgroundColor: '#1d4ed8',
-          borderColor: '#1d4ed8',
+          backgroundColor: '#94a3b8',
+          borderColor: '#64748b',
           borderWidth: 1,
         },
       ],
@@ -148,8 +191,8 @@ export class AnalyticsPageComponent {
       datasets: [
         {
           data: this.paymentStatus().map((metric) => metric.count),
-          backgroundColor: ['#15803d', '#a16207', '#dc2626'],
-          borderColor: ['#15803d', '#a16207', '#dc2626'],
+          backgroundColor: ['#3b82f6', '#f59e0b', '#94a3b8'],
+          borderColor: ['#2563eb', '#d97706', '#64748b'],
           borderWidth: 1,
         },
       ],

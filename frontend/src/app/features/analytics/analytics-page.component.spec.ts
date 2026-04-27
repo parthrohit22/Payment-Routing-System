@@ -14,6 +14,7 @@ import { NgChartsModule } from 'ng2-charts';
 })
 class BaseChartStubDirective {
   @Input() data: unknown;
+  @Input() options: unknown;
   @Input() type: unknown;
 }
 
