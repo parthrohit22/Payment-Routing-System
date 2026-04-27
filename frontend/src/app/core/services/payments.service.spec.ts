@@ -174,7 +174,7 @@ describe('PaymentsService', () => {
       (req) =>
         req.url === '/api/payments' &&
         req.params.get('page') === '1' &&
-        req.params.get('limit') === '50'
+        req.params.get('limit') === '5'
     );
 
     request.flush({
@@ -206,7 +206,7 @@ describe('PaymentsService', () => {
           },
         ],
         page: 1,
-        limit: 50,
+        limit: 5,
         total: 2,
       },
     });
@@ -222,7 +222,7 @@ describe('PaymentsService', () => {
       adminPayments = payments.length;
     });
 
-    httpController.expectOne('/api/payments?page=1&limit=50').flush({
+    httpController.expectOne('/api/payments?page=1&limit=5').flush({
       data: {
         payments: [
           {
@@ -239,7 +239,7 @@ describe('PaymentsService', () => {
           },
         ],
         page: 1,
-        limit: 50,
+        limit: 5,
         total: 1,
       },
     });
@@ -252,11 +252,11 @@ describe('PaymentsService', () => {
       merchantPayments = payments.length;
     });
 
-    httpController.expectOne('/api/payments?page=1&limit=50').flush({
+    httpController.expectOne('/api/payments?page=1&limit=5').flush({
       data: {
         payments: [],
         page: 1,
-        limit: 50,
+        limit: 5,
         total: 0,
       },
     });

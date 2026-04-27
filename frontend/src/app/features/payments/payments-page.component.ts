@@ -8,6 +8,7 @@ import { AnalyticsService } from '../../core/services/analytics.service';
 import { AuthService } from '../../core/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { PaymentsService } from '../../core/services/payments.service';
+import { DEFAULT_PAGE_SIZE } from '../../core/constants/app.constants';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { PaymentDetailPanelComponent } from './payment-detail-panel.component';
@@ -53,7 +54,7 @@ export class PaymentsPageComponent {
   protected readonly currencyFilter = signal('all');
   protected readonly sortDirection = signal<SortDirection>('desc');
   protected readonly currentPage = signal(1);
-  protected readonly pageSize = 8;
+  protected readonly pageSize = DEFAULT_PAGE_SIZE;
 
   protected readonly canViewPayments = computed(() => {
     const role = this.authService.role();

@@ -240,6 +240,9 @@ describe('PaymentsPageComponent', () => {
 
     expect(component.currentPage()).toBe(2);
     expect(component.pagedPayments().map((payment: any) => payment.merchant)).toEqual([
+      'Merchant 5',
+      'Merchant 4',
+      'Merchant 3',
       'Merchant 2',
       'Merchant 1',
     ]);

@@ -4,8 +4,8 @@ import { PaymentsQueryState } from '../models/payment.models';
 export const API_ROOT = '/api';
 export const SESSION_STORAGE_KEY = 'payment-routing-session';
 export const THEME_STORAGE_KEY = 'payment-routing-theme';
-export const INITIAL_PAGE_FETCH_SIZE = 50;
-export const DEFAULT_PAGE_SIZE = 6;
+export const INITIAL_PAGE_FETCH_SIZE = 5;
+export const DEFAULT_PAGE_SIZE = 5;
 
 export const CURRENCY_OPTIONS = ['GBP', 'USD', 'EUR'] as const;
 export const STATUS_OPTIONS = ['succeeded', 'pending', 'failed'] as const;

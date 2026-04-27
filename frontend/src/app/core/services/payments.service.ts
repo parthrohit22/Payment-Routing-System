@@ -2,7 +2,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { forkJoin, map, Observable, of, switchMap, tap } from 'rxjs';
 
-import { API_ROOT } from '../constants/app.constants';
+import { API_ROOT, DEFAULT_PAGE_SIZE } from '../constants/app.constants';
 import { ApiResponse } from '../models/api.models';
 import {
   PaginatedPaymentsResponse,
@@ -29,7 +29,7 @@ export class PaymentsService {
     return this.fetchPaymentsPage(page, limit);
   }
 
-  fetchAllPayments(forceRefresh = false, pageSize = 50): Observable<PaymentRecord[]> {
+  fetchAllPayments(forceRefresh = false, pageSize = DEFAULT_PAGE_SIZE): Observable<PaymentRecord[]> {
     const cached = this.paymentsCache();
     const cacheKey = this.currentCacheKey();
 
