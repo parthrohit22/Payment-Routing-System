@@ -1,163 +1,238 @@
 # Payment Routing System
 
-## 1. Project Overview
+![Angular](https://img.shields.io/badge/Frontend-Angular-DD0031?style=flat-square&logo=angular&logoColor=white)
+![Flask](https://img.shields.io/badge/API-Flask-000000?style=flat-square&logo=flask&logoColor=white)
+![MongoDB](https://img.shields.io/badge/Database-MongoDB-47A248?style=flat-square&logo=mongodb&logoColor=white)
+![JWT](https://img.shields.io/badge/Auth-JWT-000000?style=flat-square&logo=jsonwebtokens&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-35%20passing-success?style=flat-square)
+![Status](https://img.shields.io/badge/Status-COM661%20Portfolio%20Project-blue?style=flat-square)
 
-Payment Routing System is a full-stack payment orchestration platform built with an Angular frontend, Flask API and MongoDB persistence. It models how a fintech operations team can create payments, track provider attempts, respond to failed routes, and monitor transaction performance across multiple payment providers.
+<p align="center">
+  <b>Payment orchestration platform for provider attempt tracking, failover visibility, and operational analytics</b><br/>
+  Angular workspace · Flask API · MongoDB persistence · JWT and role-based access
+</p>
 
-The project is not just a payment list UI. It is an operational workspace for routing visibility: each payment contains provider attempt history, status transitions and customer/payment metadata so administrators, finance users and merchants can understand what happened to a transaction and what action is required next.
+<p align="center">
+  <a href="#overview"><b>Overview</b></a> ·
+  <a href="#architecture"><b>Architecture</b></a> ·
+  <a href="./docs/ARCHITECTURE.md"><b>Architecture Notes</b></a> ·
+  <a href="#local-development"><b>Local Development</b></a> ·
+  <a href="#api-overview"><b>API Overview</b></a> ·
+  <a href="#com661-rubric-alignment"><b>Rubric</b></a>
+</p>
 
-The system focuses on four realistic payment orchestration concerns:
+## Overview
 
-- provider routing: recording which provider was attempted for a transaction
-- latency awareness: storing provider latency for operational comparison
-- failover handling: preserving failed and successful provider attempts in order
-- operational visibility: surfacing payment status, provider performance and transaction flow through dashboards and analytics
+Payment Routing System is a full-stack fintech operations application built around payment orchestration. It gives merchants, finance users, and administrators a controlled workspace for creating payments, recording provider attempts, reviewing outcomes, and analysing transaction performance.
 
-This project was built for COM661 Full Stack Strategies and Development, Assignment 2, and is structured as a portfolio-quality Angular full-stack application.
+The project is intentionally more than a CRUD table. A payment record stores its provider attempt history, latency values, customer details, status, merchant ownership, and initiated timestamp. This makes the frontend useful for understanding how a transaction moved through providers and where operational intervention is needed.
 
-## 2. System Flow
+Core capabilities:
 
-A payment starts when a merchant or administrator creates a new transaction from the Angular payments workspace. The frontend validates the form, serialises the payment payload and sends it to the Flask API. The backend stores the payment in MongoDB with a `pending` status, the merchant identity and the initial payment metadata.
+- JWT-backed login and registration
+- role-aware dashboard, payments, and analytics pages
+- merchant-scoped payment visibility
+- payment creation and status management
+- provider attempt history for routing and fallback visibility
+- search, filtering, sorting, pagination, and row-level detail inspection
+- analytics for payment volume, provider latency, and status distribution
+- Angular unit tests for core services, guards, interceptors, and feature behaviour
 
-Provider attempts represent the routing layer of the system. When a provider attempt is added, the attempt records the provider name, result and latency. If one provider fails, another provider can be recorded as a fallback attempt. This produces an auditable transaction trail instead of overwriting the previous outcome.
+## Why This Project Matters
 
-As the transaction is reviewed, authorised users can update the payment status. Finance users can approve or reject payments, while administrators can manage the full payment lifecycle. Analytics then read from the same stored payment and provider-attempt data to show payment volume, status distribution and provider latency.
+Payment platforms depend on reliability. Providers can fail, slow down, or perform differently across regions. A serious operations interface needs to show more than whether a transaction is complete; it needs to show which provider was attempted, whether the attempt succeeded, how long it took, and who is allowed to act on the record.
 
-The operational flow is:
+This project demonstrates those concerns in a focused full-stack application:
 
-```text
-Payment created
--> Provider attempt recorded
--> Failure can be followed by fallback provider attempt
--> Provider attempts stored on the payment
--> Status updated by authorised role
--> Dashboard and analytics reflect the latest payment data
+- provider attempts make routing history visible instead of hiding it behind one status value
+- role-based access protects merchant and customer data
+- finance/admin workflows reflect real approval and rejection operations
+- analytics are derived from operational payment data rather than static dashboard content
+- frontend state is tested around filtering, sorting, pagination, and RBAC behaviour
+
+## Suggested Walkthrough
+
+1. Sign in as an administrator and open the dashboard.
+2. Review the payments workspace and use search, status, region, currency, sorting, and pagination.
+3. Select a payment to inspect customer details, status, and provider attempts.
+4. Add or review a provider attempt to show how failover history is represented.
+5. Sign in as a finance user and demonstrate approve/reject controls.
+6. Sign in as a merchant and confirm only merchant-owned payments are visible.
+7. Open analytics to review payment volume, provider latency, and status distribution.
+8. Run the frontend tests to show behavioural coverage.
+
+## Engineering Challenges
+
+- keeping merchant data isolated while allowing admin and finance users to see global payment data
+- preserving provider attempt history so fallback behaviour remains auditable
+- keeping backend pagination and frontend pagination aligned at 5 payments per page
+- combining search, filters, sorting, pagination, and selected-row state without stale UI
+- refreshing dashboard and analytics data after payment mutations
+- presenting role-specific controls without duplicating business logic across templates
+
+## Architecture
+
+### System Diagram
+
+```mermaid
+flowchart LR
+    U[User] --> A[Angular Frontend]
+    A --> B[HTTP Interceptor<br/>JWT Bearer Token]
+    B --> C[Flask API]
+    C --> D[Auth Routes]
+    C --> E[Payments Routes]
+    C --> F[Analytics Routes]
+    D --> G[(MongoDB Users)]
+    E --> H[(MongoDB Payments)]
+    F --> H
+    H --> A
 ```
 
-## 3. Architecture
+The Angular frontend owns the browser workflow: authentication pages, app shell, dashboard, payments workspace, analytics charts, modals, notifications, and role-aware controls.
 
-The application is separated into a browser-based Angular frontend, a Flask API and MongoDB storage.
+The Flask API owns the server-side contract: authentication, JWT validation, payment persistence, role checks, pagination, and analytics aggregation.
 
-```text
-Angular Frontend -> Flask API -> MongoDB
+MongoDB stores users and payment documents. Payment documents contain transaction metadata and the `provider_attempts` array used by the frontend for routing visibility and by analytics for latency reporting.
+
+More detailed architecture notes live in [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
+
+## Request Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant UI as Angular Frontend
+    participant API as Flask API
+    participant DB as MongoDB
+
+    User->>UI: Sign in
+    UI->>API: POST /auth/login
+    API->>DB: Validate user
+    DB-->>API: User record
+    API-->>UI: Email, role, JWT
+
+    User->>UI: Open payments
+    UI->>API: GET /payments?page=1&limit=5 + Bearer token
+    API->>API: Decode JWT and apply role scope
+    API->>DB: Query payments
+    DB-->>API: Paginated payment records
+    API-->>UI: Payments, page, limit, total
+
+    User->>UI: Update status or provider attempt
+    UI->>API: PUT /payments/:id + form body
+    API->>DB: Update payment document
+    API-->>UI: Success response
+    UI->>API: Refresh payments and analytics
 ```
 
-The Angular frontend owns the user experience: authentication screens, dashboard, payments workspace, analytics charts, filtering, sorting, pagination, modals and role-specific controls. It communicates with the API through typed Angular services.
-
-The Flask API owns persistence and access rules. It exposes authentication, payments and analytics endpoints. MongoDB stores users and payment records, including customer details and provider attempt arrays.
-
-Authentication uses JWT. When a user logs in, the API returns a token containing their email and role. The Angular app stores the session in browser session storage and an HTTP interceptor attaches the token to API requests as a bearer token. Route guards protect authenticated pages and role-specific routes.
-
-Role-based access is enforced in two places:
-
-- the frontend hides unavailable screens and actions using route guards and computed role checks
-- the backend scopes protected data using the JWT identity, especially for merchant-only payment visibility
-
-## 4. Data Model
-
-A payment record contains the transaction fields required for display, filtering, routing visibility and analytics.
-
-```json
-{
-  "_id": "65f1a7c4b2e8f4a91c0d2211",
-  "merchant": "Spotify",
-  "payment_type": "subscription",
-  "amount_minor": 1299,
-  "currency": "GBP",
-  "region": "UK",
-  "status": "success",
-  "created_by": "arjun@payments.com",
-  "initiated_at": "2026-01-03T10:00:00",
-  "customer_details": {
-    "name": "Ava Reed",
-    "email": "ava.reed@example.com",
-    "country": "UK"
-  },
-  "provider_attempts": [
-    {
-      "provider": "Stripe",
-      "result": "failure",
-      "latency_ms": 310
-    },
-    {
-      "provider": "PayPal",
-      "result": "success",
-      "latency_ms": 184
-    }
-  ]
-}
-```
-
-`amount_minor` stores money in minor units to avoid floating point currency issues. `initiated_at` supports chronological sorting and recent activity views.
-
-`provider_attempts` is central to the orchestration model. It preserves the sequence of providers attempted for a payment, records whether each attempt succeeded or failed, and captures latency. This supports failover analysis, provider performance reporting and operational investigation when a transaction does not succeed on the first route.
-
-## 5. Role-Based Access
-
-The system uses three roles, each mapped to a realistic payment operations responsibility.
-
-| Role | Access |
-| --- | --- |
-| Admin | Full access to dashboard, payments, analytics, edit/delete controls, status changes and provider attempt management |
-| Finance | Can review payments, approve/reject outcomes and view analytics |
-| Merchant | Can create payments and view only payments created by their own account |
-
-Merchant scoping is important because payments contain customer and transaction data. A merchant should not see global platform data or another merchant's transaction records. The backend scopes merchant queries by the authenticated JWT email, and the frontend payment cache is isolated by role/email/token so global admin data is not reused in a merchant session.
-
-## 6. Core Features
+## Feature Set
 
 ### Payment Operations
 
-The payments workspace provides the main operational workflow. Users can search by merchant or customer, filter by status, region and currency, sort by initiated date, paginate through records and inspect a selected payment in a detail panel. Create, edit, delete and status actions are shown only when the active role is allowed to use them.
+- searchable payments workspace
+- status, region, and currency filtering
+- newest/oldest initiated date sorting
+- backend-aligned 5-entry pagination
+- selected payment detail panel
+- create/edit payment modal
+- delete confirmation flow
+- success/error notifications
 
-### Routing and Attempts
+### Routing and Provider Attempts
 
-Provider attempts capture the routing history for a payment. Administrators can add provider attempts with provider name, result and latency. The detail panel presents this history so failed routes and fallback attempts remain visible instead of being hidden behind a single status field.
+- provider attempt records for Stripe, PayPal, and Adyen
+- attempt result tracking with success/failure
+- latency capture in milliseconds
+- fallback history represented as multiple attempts on one payment
+- detail panel visibility for operational review
 
 ### Analytics
 
-The analytics page turns operational payment data into charts for volume by currency, provider latency and payment status distribution. These charts are based on backend analytics endpoints and are refreshed after payment mutations.
+- payment volume by currency
+- provider latency chart
+- status distribution chart
+- role-scoped analytics for merchants
+- refresh after payment mutation
 
-### Authentication
+### Authentication and Access
 
-Login and registration are handled through the Flask API. The Angular app stores the authenticated session, attaches JWT headers to requests, protects private routes and adapts visible actions based on the active user role.
+- JWT-backed login
+- merchant registration
+- session storage
+- HTTP interceptor for bearer tokens
+- route guards for protected pages
+- role-specific controls for admin, finance, and merchant users
 
-## 7. Tech Stack
+## Technical Choices
 
-- Angular 21 standalone components
-- Angular signals and computed state
-- Reactive forms
-- Angular Router guards
-- Angular HTTP interceptor
-- Chart.js with ng2-charts
-- Vitest and Angular unit testing
-- Flask API
-- MongoDB
-- JWT authentication
+### Provider Attempts as the Routing Record
 
-## 8. Project Structure
+The system does not pretend to run a hidden automated routing engine. Instead, it models the operational evidence of routing: each provider attempt stores provider, result, and latency. This keeps the implementation honest while still representing failover and routing history in a way that supports analytics.
+
+### JWT plus Guards and Interceptor
+
+JWT keeps the backend responsible for identity and role claims. Angular guards protect routes before pages load, while the interceptor attaches the bearer token consistently without each service manually handling auth headers.
+
+### Signals and Computed State
+
+The payments page uses signals for local state and computed values for derived state. Search, filters, sorting, pagination, and selected payment synchronisation are kept predictable because the original payment list is not mutated directly.
+
+### Backend Role Scoping
+
+Merchant visibility is enforced by the backend using the JWT email. The frontend also isolates cached payment data by role/email/token so global admin data cannot leak into a merchant session.
+
+## Project Structure
 
 ```text
 Payment Routing System/
 ├── api/
-│   ├── app.py              # Flask app entry point and route registration
-│   ├── auth.py             # Login and registration endpoints
-│   ├── payments.py         # Payment CRUD, RBAC queries and analytics endpoints
-│   ├── db.py               # MongoDB connection
-│   ├── utils.py            # JWT, response and role helper functions
-│   └── userdata.py         # Demo user seeding
+│   ├── app.py                    Flask entry point and blueprint registration
+│   ├── auth.py                   Login and registration endpoints
+│   ├── payments.py               Payment CRUD, RBAC queries, analytics endpoints
+│   ├── db.py                     MongoDB connection
+│   ├── utils.py                  JWT, API response, and role helpers
+│   ├── userdata.py               Demo user seeding
+│   └── requirements.txt          Backend dependencies
 ├── frontend/
-│   ├── src/app/core/       # Services, guards, interceptor, constants and models
-│   ├── src/app/features/   # Auth, dashboard, payments, analytics and unauthorized pages
-│   ├── src/app/shared/     # Reusable UI components
-│   ├── angular.json        # Angular project configuration
-│   └── package.json        # Frontend dependencies and scripts
-└── docs/                   # Coursework and portfolio documentation
+│   ├── angular.json              Angular project configuration
+│   ├── package.json              Frontend dependencies and scripts
+│   ├── proxy.conf.json           Dev proxy from Angular to Flask
+│   └── src/app/
+│       ├── core/                 Services, guards, interceptor, models, constants
+│       ├── features/             Auth, dashboard, payments, analytics, unauthorized
+│       └── shared/               App shell, stat cards, empty states, dialogs, theme toggle
+└── docs/
+    ├── API_ENDPOINTS.md          API request/response documentation
+    ├── APPLICATION_DOCUMENTATION.md
+    ├── ARCHITECTURE.md           Deeper system and request-flow notes
+    └── TESTING_SUMMARY.md
 ```
 
-The backend and frontend are intentionally separated. The backend exposes the API and applies persistence/security rules. The frontend consumes that API through services and focuses on usability, state management and role-aware workflows.
+## Stack
 
-## 9. Run Locally
+- Angular 21
+- TypeScript
+- Angular signals and computed state
+- Reactive forms
+- Angular Router guards
+- Angular HTTP interceptor
+- RxJS
+- Chart.js and ng2-charts
+- Vitest / Angular unit testing
+- Python
+- Flask
+- MongoDB / PyMongo
+- PyJWT
+- bcrypt
+
+## Local Development
+
+### Requirements
+
+- Python 3.11 or newer recommended
+- Node.js LTS recommended
+- npm
+- MongoDB connection available to the Flask API
 
 ### Backend
 
@@ -168,6 +243,8 @@ python userdata.py
 python app.py
 ```
 
+By default, Flask runs on `http://127.0.0.1:5000`.
+
 ### Frontend
 
 ```bash
@@ -176,9 +253,22 @@ npm install
 ng serve
 ```
 
-The Angular development server uses `frontend/proxy.conf.json` so frontend calls to `/api` are forwarded to the Flask backend.
+Open the Angular app at `http://localhost:4200`.
 
-## 10. Testing
+Angular proxies `/api` requests to Flask through `frontend/proxy.conf.json`.
+
+## Demo Accounts
+
+Seed users are defined in `api/userdata.py`.
+
+| Role | Email | Password | Access |
+| --- | --- | --- | --- |
+| Admin | `parth@payments.com` | `admin123` | Full operational access |
+| Finance | `vishnu@payments.com` | `finance123` | Review, approve/reject, analytics |
+| Merchant | `arjun@payments.com` | `pass123` | Own payments only, create payments |
+| Merchant | `honey@payments.com` | `pass123` | Own payments only, create payments |
+
+## Verification
 
 Run the frontend test suite:
 
@@ -194,20 +284,66 @@ cd frontend
 ng build
 ```
 
-The tests cover authentication, guards, HTTP interception, payment service behaviour, payment filtering/sorting/pagination, provider attempts, analytics rendering states, theme handling and app bootstrapping.
+Current automated coverage includes auth, guards, interceptor, payment service behaviour, payment page filtering/sorting/pagination, provider attempts, analytics states, theme service, and app bootstrapping.
 
-## 11. Rubric Alignment
+## API Overview
 
-| COM661 Criterion | Evidence |
+### Auth Endpoints
+
+| Method | Route | Description |
+| --- | --- | --- |
+| `POST` | `/api/auth/login` | Authenticate a user and return JWT session data |
+| `POST` | `/api/auth/register` | Register a merchant account |
+
+### Payments Endpoints
+
+| Method | Route | Description |
+| --- | --- | --- |
+| `GET` | `/api/payments?page=1&limit=5` | Retrieve role-scoped paginated payments |
+| `POST` | `/api/payments` | Create a new payment |
+| `PUT` | `/api/payments/:id` | Update payment status or append provider attempts |
+| `DELETE` | `/api/payments/:id` | Delete a payment as admin |
+
+### Analytics Endpoints
+
+| Method | Route | Description |
+| --- | --- | --- |
+| `GET` | `/api/analytics/payment-volume` | Payment volume grouped by currency |
+| `GET` | `/api/analytics/provider-latency` | Average latency grouped by provider |
+| `GET` | `/api/analytics/payment-status` | Payment count grouped by status |
+
+Full endpoint examples are documented in [docs/API_ENDPOINTS.md](./docs/API_ENDPOINTS.md).
+
+## Tradeoffs
+
+- provider attempts represent routing/failover history, but automated provider selection is not implemented
+- analytics focus on operational metrics rather than predictive performance modelling
+- session storage is suitable for coursework/demo use but a production deployment would need stricter token lifecycle controls
+- the frontend has unit coverage for key behaviours, but browser-level e2e tests would improve confidence
+- the API is intentionally compact because CW2 assesses the Angular frontend
+
+## Roadmap Ideas
+
+- automated provider selection based on latency and success history
+- audit log for status changes and provider attempt additions
+- end-to-end browser tests for role workflows
+- exportable payment reports for finance users
+- advanced analytics for success rate by provider and region
+- production deployment notes with environment-specific configuration
+
+## COM661 Rubric Alignment
+
+| Criterion | Evidence |
 | --- | --- |
-| Use of Angular | Standalone components, signals, computed state, reactive forms, guards, interceptor, pipes, inputs/outputs, template control flow and charts |
-| Application Structure | Clear `core`, `features` and `shared` separation with typed models and dedicated services |
-| Back-End Communication | Authenticated GET, POST, PUT and DELETE workflows with JWT headers, pagination, analytics endpoints and role-scoped responses |
-| Usability | Search, filtering, sorting, pagination, modals, confirmation, notifications, loading/error/empty states, responsive auth and role-specific controls |
-| Documentation and Testing | README, endpoint summary, system documentation, testing summary, self-evaluation support and automated unit tests |
+| Use of Angular | Standalone components, signals, computed state, reactive forms, route guards, interceptor, pipes, inputs/outputs, template control flow, and charts |
+| Application Structure | Clear `core`, `features`, and `shared` separation with typed models and reusable components |
+| Backend Communication | Authenticated GET, POST, PUT, and DELETE flows with JWT, pagination, role scoping, and analytics endpoints |
+| Usability | Search, filters, sorting, pagination, modals, detail panels, notifications, confirmation, loading/error/empty states, responsive auth, and theme support |
+| Submission Quality | README, API docs, architecture notes, application documentation, and testing summary are included |
 
-## 12. Why This Project
+## Documentation
 
-Payment routing is a real fintech problem. Providers differ in availability, latency, region support and reliability. A serious payment platform needs more than a transaction table: it needs visibility into provider attempts, failure handling, status ownership and operational metrics.
-
-This project demonstrates those concerns in a focused full-stack application. It shows how an Angular frontend can support realistic payment operations through authenticated workflows, role-based access, reactive forms, API integration, analytics and tested state-driven UI behaviour.
+- [Architecture Notes](./docs/ARCHITECTURE.md)
+- [API Endpoints](./docs/API_ENDPOINTS.md)
+- [Application Documentation](./docs/APPLICATION_DOCUMENTATION.md)
+- [Testing Summary](./docs/TESTING_SUMMARY.md)
