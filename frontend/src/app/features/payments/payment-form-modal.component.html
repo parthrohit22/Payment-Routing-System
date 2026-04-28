@@ -1,5 +1,5 @@
 @if (open()) {
-  <div class="payment-modal__backdrop" (click)="cancelled.emit()">
+  <div class="payment-modal__backdrop" (click)="!submitting() && cancelled.emit()">
 
     <section
       class="payment-modal__card panel"
@@ -14,6 +14,7 @@
         <button
           type="button"
           class="button button--ghost"
+          [disabled]="submitting()"
           (click)="cancelled.emit()"
         >
           Close
@@ -137,6 +138,7 @@
           <button
             type="button"
             class="button button--ghost"
+            [disabled]="submitting()"
             (click)="cancelled.emit()"
           >
             Cancel
