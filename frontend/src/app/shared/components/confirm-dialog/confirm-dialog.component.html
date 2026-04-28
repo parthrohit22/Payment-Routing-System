@@ -1,5 +1,5 @@
 @if (open()) {
-  <div class="dialog-backdrop" (click)="cancelled.emit()">
+  <div class="dialog-backdrop" (click)="!disabled() && cancelled.emit()">
     <section
       class="dialog-card"
       role="dialog"
@@ -11,12 +11,18 @@
       <p>{{ message() }}</p>
 
       <div class="dialog-card__actions">
-        <button type="button" class="button button--ghost" (click)="cancelled.emit()">
+        <button
+          type="button"
+          class="button button--ghost"
+          [disabled]="disabled()"
+          (click)="cancelled.emit()"
+        >
           {{ cancelLabel() }}
         </button>
         <button
           type="button"
           class="button"
+          [disabled]="disabled()"
           [ngClass]="{
             'button--danger': tone() === 'danger',
             'button--primary': tone() !== 'danger'

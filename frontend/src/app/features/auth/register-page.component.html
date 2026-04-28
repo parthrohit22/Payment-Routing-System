@@ -69,8 +69,23 @@
               <label for="register-password">Password</label>
               <input id="register-password" type="password" formControlName="password" />
               @if (registerForm.controls.password.touched && registerForm.controls.password.invalid) {
-                <p class="field__error">Use at least 6 characters.</p>
+                <p class="field__error">Use a stronger password.</p>
               }
+              <ul class="password-checklist" aria-label="Password requirements">
+                @for (check of passwordChecks(); track check.label) {
+                  <li [class.is-valid]="check.valid">
+                    <span>{{ check.valid ? '✓' : '•' }}</span>
+                    {{ check.label }}
+                  </li>
+                }
+              </ul>
+              <button
+                type="button"
+                class="button button--secondary auth-form-card__generate"
+                (click)="generateStrongPassword()"
+              >
+                Generate Strong Password
+              </button>
             </div>
 
             <div class="field">
@@ -84,7 +99,7 @@
               <p class="field__error">{{ errorMessage() }}</p>
             }
 
-            <button type="submit" class="button button--primary" [disabled]="isSubmitting()">
+            <button type="submit" class="button button--primary" [disabled]="isSubmitting() || registerForm.invalid">
               {{ isSubmitting() ? 'Creating account...' : 'Create account' }}
             </button>
           </form>

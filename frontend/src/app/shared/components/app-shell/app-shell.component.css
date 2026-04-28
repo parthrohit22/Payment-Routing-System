@@ -115,6 +115,10 @@
   flex-wrap: wrap;
 }
 
+.app-shell__delete-account {
+  white-space: nowrap;
+}
+
 .app-shell__content {
   min-width: 0;
   padding: 1.5rem;

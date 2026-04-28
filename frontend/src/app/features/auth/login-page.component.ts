@@ -29,6 +29,15 @@ export class LoginPageComponent {
   });
 
   constructor() {
+    const signinState = (history.state ?? {}) as { email?: unknown; password?: unknown };
+
+    if (typeof signinState.email === 'string' || typeof signinState.password === 'string') {
+      this.loginForm.patchValue({
+        email: typeof signinState.email === 'string' ? signinState.email : '',
+        password: typeof signinState.password === 'string' ? signinState.password : '',
+      });
+    }
+
     effect(() => {
       const session = this.authService.session();
       if (session) {

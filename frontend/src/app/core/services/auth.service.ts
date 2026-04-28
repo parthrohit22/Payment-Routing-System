@@ -55,6 +55,10 @@ export class AuthService {
     return this.http.post<ApiResponse<unknown>>(`${API_ROOT}/auth/register`, formData);
   }
 
+  deleteAccount(): Observable<ApiResponse<unknown>> {
+    return this.http.delete<ApiResponse<unknown>>(`${API_ROOT}/me`);
+  }
+
   logout(): void {
     this.sessionState.set(null);
     this.sessionStorage.remove(SESSION_STORAGE_KEY);

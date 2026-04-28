@@ -33,7 +33,22 @@
           {{ backendHealthy() === true ? 'API live' : 'API checking' }}
         </span>
         <app-theme-toggle></app-theme-toggle>
-        <button type="button" class="button button--ghost" (click)="logout()">Log out</button>
+        <button
+          type="button"
+          class="button button--danger app-shell__delete-account"
+          [disabled]="isDeletingAccount()"
+          (click)="requestAccountDeletion()"
+        >
+          Delete Account
+        </button>
+        <button
+          type="button"
+          class="button button--ghost"
+          [disabled]="isDeletingAccount()"
+          (click)="logout()"
+        >
+          Log out
+        </button>
       </div>
     </header>
 
@@ -42,3 +57,15 @@
     </main>
   </div>
 </div>
+
+<app-confirm-dialog
+  [open]="isDeleteAccountDialogOpen()"
+  title="Delete account"
+  message="Your account and payments created by this account will be permanently removed."
+  confirmLabel="Delete account"
+  cancelLabel="Cancel"
+  tone="danger"
+  [disabled]="isDeletingAccount()"
+  (cancelled)="cancelAccountDeletion()"
+  (confirmed)="confirmAccountDeletion()"
+></app-confirm-dialog>

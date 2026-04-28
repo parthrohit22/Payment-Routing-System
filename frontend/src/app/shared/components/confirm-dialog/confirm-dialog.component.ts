@@ -14,6 +14,7 @@ export class ConfirmDialogComponent {
   readonly confirmLabel = input('Confirm');
   readonly cancelLabel = input('Cancel');
   readonly tone = input<'danger' | 'neutral'>('neutral');
+  readonly disabled = input(false);
 
   readonly confirmed = output<void>();
   readonly cancelled = output<void>();

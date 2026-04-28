@@ -54,13 +54,22 @@ describe('AuthService', () => {
   });
 
   it('always sends merchant as the registration role', () => {
-    service.register('new@merchant.com', 'pass123').subscribe();
+    service.register('new@merchant.com', 'StrongPass1!').subscribe();
 
     const request = httpController.expectOne('/api/auth/register');
     expect(request.request.method).toBe('POST');
     expect((request.request.body as FormData).get('role')).toBe('merchant');
 
     request.flush({ message: 'User registered successfully' });
+  });
+
+  it('deletes the current account', () => {
+    service.deleteAccount().subscribe();
+
+    const request = httpController.expectOne('/api/me');
+    expect(request.request.method).toBe('DELETE');
+
+    request.flush({ message: 'Account deleted' });
   });
 
   it('does not store a session when login fails', () => {

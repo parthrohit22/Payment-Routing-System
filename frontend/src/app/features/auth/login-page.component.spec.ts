@@ -41,6 +41,10 @@ describe('LoginPageComponent', () => {
     fixture.detectChanges();
   });
 
+  afterEach(() => {
+    window.history.replaceState({}, '', '/');
+  });
+
   it('renders the internal access card', () => {
     const text = fixture.nativeElement.textContent;
 
@@ -66,5 +70,37 @@ describe('LoginPageComponent', () => {
     expect(fixture.nativeElement.querySelector('.auth-showcase')).toBeNull();
     expect(text).not.toContain('by PARTH ROHIT');
     expect(text).not.toContain('JWT-secured access');
+  });
+
+  it('keeps login fields blank without registration navigation state', () => {
+    const component = fixture.componentInstance as any;
+
+    expect(component.loginForm.getRawValue()).toEqual({
+      email: '',
+      password: '',
+    });
+  });
+
+  it('prefills login fields from registration navigation state', async () => {
+    window.history.replaceState(
+      {
+        email: 'new@merchant.com',
+        password: 'StrongPass1!',
+      },
+      '',
+      '/login'
+    );
+
+    fixture = TestBed.createComponent(LoginPageComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance as any;
+
+    expect(component.loginForm.getRawValue()).toEqual({
+      email: 'new@merchant.com',
+      password: 'StrongPass1!',
+    });
   });
 });
