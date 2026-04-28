@@ -181,6 +181,14 @@ The payments page uses signals for local state and computed values for derived s
 
 Merchant visibility is enforced by the backend using the JWT email. The frontend also isolates cached payment data by role/email/token so global admin data cannot leak into a merchant session.
 
+## Production Identity Upgrade
+
+The submitted version uses custom JWT authentication issued by the Flask API. Angular stores the active session, attaches the bearer token through the interceptor, and uses guards plus role checks to protect admin, finance, and merchant workflows.
+
+Auth0 is documented as a future production hardening path only. A production version could move login, external identity providers, MFA readiness, token lifecycle management, and tenant-managed users to Auth0 while preserving the existing RBAC and merchant-scoping concepts.
+
+The planned migration is documented in [docs/AUTH0_UPGRADE_PLAN.md](./docs/AUTH0_UPGRADE_PLAN.md).
+
 ## Project Structure
 
 ```text
@@ -344,6 +352,7 @@ Full endpoint examples are documented in [docs/API_ENDPOINTS.md](./docs/API_ENDP
 ## Documentation
 
 - [Architecture Notes](./docs/ARCHITECTURE.md)
+- [Auth0 Production Identity Upgrade Plan](./docs/AUTH0_UPGRADE_PLAN.md)
 - [API Endpoints](./docs/API_ENDPOINTS.md)
 - [Application Documentation](./docs/APPLICATION_DOCUMENTATION.md)
 - [Testing Summary](./docs/TESTING_SUMMARY.md)

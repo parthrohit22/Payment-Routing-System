@@ -103,6 +103,20 @@ Backend:
 
 This double layer matters because UI hiding is not security by itself. The backend still owns the real data boundary.
 
+## Auth0-ready Boundary
+
+The current application does not implement Auth0. It uses Flask-issued JWTs for the submitted coursework version. The authentication boundary is still deliberately isolated so a future production identity provider can be introduced without rewriting the payments, analytics, dashboard, or RBAC feature screens.
+
+The main boundary points are:
+
+- `AuthService` owns login, registration, logout, active session state, role, email, and token access
+- route guards use the auth abstraction to protect authenticated and role-specific screens
+- the HTTP interceptor centralises bearer token attachment for API requests
+- backend token validation resolves the authenticated identity before protected handlers run
+- payment queries scope merchant data using the authenticated email, not client-side filtering alone
+
+With this structure, a future Auth0 migration would replace the token issuer and validation mechanism while keeping the same application-level concepts: authenticated user, role, bearer token, guarded routes, and server-side merchant scoping.
+
 ## Payment Lifecycle
 
 ```mermaid
