@@ -181,6 +181,23 @@ This supports:
 
 The current implementation records and displays provider attempts. It does not claim to automatically choose the best provider in code.
 
+### Payment Routing Decision Flow
+
+```mermaid
+flowchart TD
+    A[Merchant creates payment] --> B[Status = pending]
+    B --> C[Finance review]
+    C --> D{Decision}
+    D -->|Rejected| E[Status = failed]
+    D -->|Approved| F[Provider attempt<br/>Stripe / PayPal / Adyen]
+    F --> G{Attempt result}
+    G -->|Success| H[Status = success]
+    G -->|Failure| I[Retry with another provider]
+    I --> F
+    E --> J[Analytics aggregation]
+    H --> J
+```
+
 ## Pagination Model
 
 The payments API supports `page` and `limit`. The backend default and frontend page size are aligned at 5 entries per page.

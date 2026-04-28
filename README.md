@@ -152,6 +152,26 @@ User passwords are hashed before storage. The `role` value is one of `admin`, `f
 
 This structure supports retry logic, analytics aggregation, and full payment traceability. Provider attempts represent the routing simulation history, latency values act as a future optimisation signal, and payment `status` is controlled through finance/admin workflows rather than uncontrolled merchant edits.
 
+### Routing Strategy (Conceptual)
+
+Routing is represented through the `provider_attempts` array on each payment record. Each attempt stores the provider name, the result as `success` or `failure`, and latency in milliseconds. This makes `provider_attempts` the routing history for the payment rather than a separate routing table.
+
+Routing is currently simulated/manual through the operations interface. If one provider attempt fails, another provider can be recorded as a retry or fallback attempt on the same payment. Merchant users can create payments, but routing attempts and status updates are controlled by finance/admin workflows.
+
+This design gives the application operational visibility, analytics value, and traceability of the payment flow. The latency field acts as a performance signal, while the ordered attempts show how the payment moved across providers.
+
+In a production routing engine, provider selection could be automatic. The system could use historical latency, success rate, region, and currency to choose the best provider before recording the resulting attempt.
+
+### End-to-End Payment Flow
+
+1. A merchant creates a payment.
+2. The payment is stored with `status = pending`.
+3. Finance reviews the payment.
+4. The payment is approved or rejected.
+5. Provider attempts are recorded for Stripe, PayPal, or Adyen.
+6. Status is updated based on the operational result.
+7. Analytics aggregate payment volume, provider latency, and status distribution.
+
 ## Request Flow
 
 ```mermaid
