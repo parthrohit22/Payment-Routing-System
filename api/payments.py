@@ -13,6 +13,15 @@ VALID_CURRENCIES = ["GBP", "USD", "EUR"]
 VALID_ATTEMPT_PROVIDERS = ["Stripe", "PayPal", "Adyen"]
 VALID_ATTEMPT_RESULTS = ["success", "failure"]
 VALID_PAYMENT_STATUS = ["success", "pending", "failed"]
+FINANCE_FORBIDDEN_UPDATE_FIELDS = {
+    "merchant",
+    "payment_type",
+    "amount_minor",
+    "currency",
+    "region",
+    "customer_details",
+    "initiated_at",
+}
 
 def build_query():
     query = {}
@@ -195,9 +204,19 @@ def add_payment():
 
 @payments_bp.route("/payments/<id>", methods=["PUT"])
 def update_payment(id):
-    err = require_roles(["admin", "finance"])
+    err = require_roles(["admin", "finance", "merchant"])
     if err:
         return err
+
+    role = g.user["role"]
+
+    if role == "merchant":
+        return api_response(message="Access denied", status=403)
+
+    if role == "finance":
+        attempted_fields = set(request.form.keys())
+        if attempted_fields & FINANCE_FORBIDDEN_UPDATE_FIELDS:
+            return api_response(message="Access denied", status=403)
 
     try:
         oid = ObjectId(id)
@@ -205,6 +224,52 @@ def update_payment(id):
         return api_response(message="Invalid ID", status=400)
 
     update = {}
+
+    if role == "admin":
+        if "merchant" in request.form:
+            merchant = request.form.get("merchant", "").strip()
+            if not merchant:
+                return api_response(message="Invalid merchant", status=400)
+            update["merchant"] = merchant
+
+        if "payment_type" in request.form:
+            payment_type = request.form.get("payment_type", "").strip()
+            if not payment_type:
+                return api_response(message="Invalid payment type", status=400)
+            update["payment_type"] = payment_type
+
+        if "amount_minor" in request.form:
+            try:
+                amount = int(request.form.get("amount_minor", 0))
+                if amount <= 0:
+                    raise ValueError
+            except:
+                return api_response(message="Invalid amount", status=400)
+            update["amount_minor"] = amount
+
+        if "currency" in request.form:
+            currency = request.form.get("currency")
+            if currency not in VALID_CURRENCIES:
+                return api_response(message="Invalid currency", status=400)
+            update["currency"] = currency
+
+        if "region" in request.form:
+            region = request.form.get("region", "").strip()
+            if not region:
+                return api_response(message="Invalid region", status=400)
+            update["region"] = region
+
+        if "initiated_at" in request.form:
+            initiated_at = request.form.get("initiated_at", "").strip()
+            if not initiated_at:
+                return api_response(message="Invalid initiated_at", status=400)
+            update["initiated_at"] = initiated_at
+
+        if "customer_details" in request.form:
+            customer, err = parse_customer_details()
+            if err:
+                return err
+            update["customer_details"] = customer
 
     if "status" in request.form:
         status = request.form.get("status")

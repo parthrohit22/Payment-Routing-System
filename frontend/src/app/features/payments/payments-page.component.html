@@ -101,7 +101,7 @@
       } @else if (!sortedPayments().length) {
         <app-empty-state
           title="No payments found"
-          message="Adjust filters or create a new payment"
+          message="No payments found for current filters."
         ></app-empty-state>
       } @else {
         <div class="payments-page__table-wrap">
@@ -171,6 +171,7 @@
       [canDelete]="canDeletePayments()"
       [canAddAttempt]="canAddProviderAttempts()"
       [canChangeStatus]="canChangeStatus()"
+      [submitting]="isSubmitting()"
       (closed)="clearSelection()"
       (edited)="openEditModal()"
       (deleted)="requestDelete()"
@@ -183,6 +184,7 @@
     [open]="isFormOpen()"
     [mode]="formMode()"
     [payment]="selectedPayment()"
+    [submitting]="isSubmitting()"
     (cancelled)="isFormOpen.set(false)"
     (saved)="submitPayment($event)"
   ></app-payment-form-modal>
@@ -194,6 +196,7 @@
     confirmLabel="Delete"
     cancelLabel="Cancel"
     tone="danger"
+    [disabled]="isSubmitting()"
     (cancelled)="cancelDelete()"
     (confirmed)="confirmDelete()"
   ></app-confirm-dialog>

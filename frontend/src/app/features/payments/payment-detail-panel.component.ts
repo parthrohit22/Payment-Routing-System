@@ -26,6 +26,7 @@ export class PaymentDetailPanelComponent {
   canDelete = input(false);
   canAddAttempt = input(false);
   canChangeStatus = input(false);
+  submitting = input(false);
 
   closed = output<void>();
   edited = output<void>();
@@ -75,6 +76,10 @@ export class PaymentDetailPanelComponent {
   }
 
   openAttemptModal(): void {
+    if (this.submitting()) {
+      return;
+    }
+
     this.attemptForm.reset({
       provider: 'Stripe',
       result: 'success',
@@ -85,11 +90,13 @@ export class PaymentDetailPanelComponent {
   }
 
   closeAttemptModal(): void {
-    this.isAttemptModalOpen = false;
+    if (!this.submitting()) {
+      this.isAttemptModalOpen = false;
+    }
   }
 
   submitAttempt(): void {
-    if (this.attemptForm.invalid) {
+    if (this.attemptForm.invalid || this.submitting()) {
       this.attemptForm.markAllAsTouched();
       return;
     }
@@ -106,10 +113,14 @@ export class PaymentDetailPanelComponent {
   }
 
   approve(): void {
-    this.statusChanged.emit('success');
+    if (!this.submitting()) {
+      this.statusChanged.emit('success');
+    }
   }
 
   reject(): void {
-    this.statusChanged.emit('failed');
+    if (!this.submitting()) {
+      this.statusChanged.emit('failed');
+    }
   }
 }

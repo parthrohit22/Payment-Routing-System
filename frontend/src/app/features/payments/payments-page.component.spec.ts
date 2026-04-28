@@ -52,6 +52,8 @@ describe('PaymentsPageComponent', () => {
     fetchAllPayments: ReturnType<typeof vi.fn>;
     createPayment: ReturnType<typeof vi.fn>;
     updatePayment: ReturnType<typeof vi.fn>;
+    updatePaymentStatus: ReturnType<typeof vi.fn>;
+    addProviderAttempt: ReturnType<typeof vi.fn>;
     deletePayment: ReturnType<typeof vi.fn>;
   };
   let notificationService: {
@@ -72,6 +74,8 @@ describe('PaymentsPageComponent', () => {
       fetchAllPayments: vi.fn().mockReturnValue(of(mockPayments)),
       createPayment: vi.fn().mockReturnValue(of({ message: 'created' })),
       updatePayment: vi.fn().mockReturnValue(of({ message: 'updated' })),
+      updatePaymentStatus: vi.fn().mockReturnValue(of({ message: 'updated' })),
+      addProviderAttempt: vi.fn().mockReturnValue(of({ message: 'updated' })),
       deletePayment: vi.fn().mockReturnValue(of({ message: 'deleted' })),
     };
 
@@ -133,26 +137,32 @@ describe('PaymentsPageComponent', () => {
     expect(text).not.toContain('Add payment');
     expect(text).toContain('Approve');
     expect(text).toContain('Reject');
+    expect(text).toContain('Add attempt');
   });
 
-  it('appends provider attempts before updating the payment', () => {
+  it('sends a minimal provider attempt payload', () => {
     const component = fixture.componentInstance as any;
     component.selectPayment(mockPayments[0]);
     fixture.detectChanges();
 
     component.addAttempt({ provider: 'PayPal', result: 'failure', latency_ms: 310 });
 
-    expect(paymentsService.updatePayment).toHaveBeenCalledWith(
-      '1',
-      expect.objectContaining({
-        providerAttempts: [
-          { provider: 'Stripe', result: 'success', latency_ms: 142 },
-          { provider: 'PayPal', result: 'failure', latency_ms: 310 },
-        ],
-      })
-    );
+    expect(paymentsService.addProviderAttempt).toHaveBeenCalledWith('1', {
+      provider: 'PayPal',
+      result: 'failure',
+      latency_ms: 310,
+    });
     expect(analyticsService.refreshAfterMutation).toHaveBeenCalled();
     expect(notificationService.success).toHaveBeenCalledWith('Provider attempt added');
+  });
+
+  it('sends a minimal status update payload', () => {
+    const component = fixture.componentInstance as any;
+    component.selectPayment(mockPayments[0]);
+
+    component.updateStatus('failed');
+
+    expect(paymentsService.updatePaymentStatus).toHaveBeenCalledWith('1', 'failed');
   });
 
   it('opens a delete confirmation flow for admins', () => {
@@ -256,5 +266,18 @@ describe('PaymentsPageComponent', () => {
     fixture.detectChanges();
 
     expect(component.selectedPayment()).toBeNull();
+  });
+
+  it('disables destructive payment actions while submitting', () => {
+    const component = fixture.componentInstance as any;
+    component.selectPayment(mockPayments[0]);
+    component.isSubmitting.set(true);
+    fixture.detectChanges();
+
+    const deleteButton = Array.from(
+      fixture.nativeElement.querySelectorAll('button')
+    ).find((button: any) => button.textContent.includes('Delete')) as HTMLButtonElement | undefined;
+
+    expect(deleteButton?.disabled).toBe(true);
   });
 });

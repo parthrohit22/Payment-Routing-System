@@ -66,7 +66,10 @@ export class PaymentsPageComponent {
   });
   protected readonly canEditPayments = computed(() => this.authService.role() === 'admin');
   protected readonly canDeletePayments = computed(() => this.authService.role() === 'admin');
-  protected readonly canAddProviderAttempts = computed(() => this.authService.role() === 'admin');
+  protected readonly canAddProviderAttempts = computed(() => {
+    const role = this.authService.role();
+    return role === 'admin' || role === 'finance';
+  });
   protected readonly canChangeStatus = computed(() => {
     const role = this.authService.role();
     return role === 'admin' || role === 'finance';
@@ -185,12 +188,16 @@ export class PaymentsPageComponent {
   }
 
   protected openCreateModal(): void {
+    if (this.isSubmitting()) {
+      return;
+    }
+
     this.formMode.set('create');
     this.isFormOpen.set(true);
   }
 
   protected openEditModal(): void {
-    if (!this.selectedPayment()) {
+    if (!this.selectedPayment() || this.isSubmitting()) {
       return;
     }
 
@@ -199,6 +206,10 @@ export class PaymentsPageComponent {
   }
 
   protected submitPayment(payload: PaymentUpsertPayload): void {
+    if (this.isSubmitting()) {
+      return;
+    }
+
     const selected = this.selectedPayment();
     const request =
       this.formMode() === 'create' || !selected?._id
@@ -231,18 +242,20 @@ export class PaymentsPageComponent {
   }
 
   protected requestDelete(): void {
-    if (this.selectedPayment()) {
+    if (this.selectedPayment() && !this.isSubmitting()) {
       this.deleteCandidate.set(this.selectedPayment());
     }
   }
 
   protected cancelDelete(): void {
-    this.deleteCandidate.set(null);
+    if (!this.isSubmitting()) {
+      this.deleteCandidate.set(null);
+    }
   }
 
   protected confirmDelete(): void {
     const candidate = this.deleteCandidate();
-    if (!candidate?._id) {
+    if (!candidate?._id || this.isSubmitting()) {
       return;
     }
 
@@ -277,11 +290,10 @@ export class PaymentsPageComponent {
       return;
     }
 
-    const payload = this.toPaymentPayload({ ...selected, status });
     this.isSubmitting.set(true);
 
     this.paymentsService
-      .updatePayment(selected._id, payload)
+      .updatePaymentStatus(selected._id, status)
       .pipe(
         finalize(() => this.isSubmitting.set(false)),
         takeUntilDestroyed(this.destroyRef)
@@ -304,12 +316,10 @@ export class PaymentsPageComponent {
       return;
     }
 
-    const nextAttempts = [...(selected.provider_attempts ?? []), attempt];
-    const payload = this.toPaymentPayload(selected, nextAttempts);
     this.isSubmitting.set(true);
 
     this.paymentsService
-      .updatePayment(selected._id, payload)
+      .addProviderAttempt(selected._id, attempt)
       .pipe(
         finalize(() => this.isSubmitting.set(false)),
         takeUntilDestroyed(this.destroyRef)

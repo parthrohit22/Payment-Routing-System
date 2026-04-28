@@ -163,6 +163,44 @@ describe('PaymentsService', () => {
     request.flush({ message: 'Payment added' });
   });
 
+  it('serializes status-only updates', () => {
+    service.updatePaymentStatus('payment-1', 'success').subscribe();
+
+    const request = httpController.expectOne('/api/payments/payment-1');
+    expect(request.request.method).toBe('PUT');
+
+    const body = new URLSearchParams(request.request.body as string);
+    expect(Array.from(body.keys())).toEqual(['status']);
+    expect(body.get('status')).toBe('success');
+
+    request.flush({ message: 'Updated' });
+  });
+
+  it('serializes provider-attempt-only updates', () => {
+    service
+      .addProviderAttempt('payment-1', {
+        provider: 'PayPal',
+        result: 'success',
+        latency_ms: 180,
+      })
+      .subscribe();
+
+    const request = httpController.expectOne('/api/payments/payment-1');
+    expect(request.request.method).toBe('PUT');
+
+    const body = new URLSearchParams(request.request.body as string);
+    expect(Array.from(body.keys())).toEqual(['provider_attempts']);
+    expect(JSON.parse(body.get('provider_attempts') ?? '[]')).toEqual([
+      {
+        provider: 'PayPal',
+        result: 'success',
+        latency_ms: 180,
+      },
+    ]);
+
+    request.flush({ message: 'Updated' });
+  });
+
   it('filters cached payments by status', () => {
     let statuses: string[] = [];
 

@@ -8,6 +8,7 @@ import {
   PaginatedPaymentsResponse,
   PaymentRecord,
   PaymentUpsertPayload,
+  ProviderAttempt,
 } from '../models/payment.models';
 import { AuthService } from './auth.service';
 
@@ -80,6 +81,28 @@ export class PaymentsService {
   updatePayment(id: string, payload: PaymentUpsertPayload): Observable<ApiResponse<unknown>> {
     return this.http
       .put<ApiResponse<unknown>>(`${API_ROOT}/payments/${id}`, this.toFormBody(payload), {
+        headers: this.formHeaders,
+      })
+      .pipe(tap(() => this.invalidateCache()));
+  }
+
+  updatePaymentStatus(id: string, status: string): Observable<ApiResponse<unknown>> {
+    const body = new URLSearchParams();
+    body.set('status', status);
+
+    return this.http
+      .put<ApiResponse<unknown>>(`${API_ROOT}/payments/${id}`, body.toString(), {
+        headers: this.formHeaders,
+      })
+      .pipe(tap(() => this.invalidateCache()));
+  }
+
+  addProviderAttempt(id: string, attempt: ProviderAttempt): Observable<ApiResponse<unknown>> {
+    const body = new URLSearchParams();
+    body.set('provider_attempts', JSON.stringify([attempt]));
+
+    return this.http
+      .put<ApiResponse<unknown>>(`${API_ROOT}/payments/${id}`, body.toString(), {
         headers: this.formHeaders,
       })
       .pipe(tap(() => this.invalidateCache()));
