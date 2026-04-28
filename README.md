@@ -96,6 +96,62 @@ MongoDB stores users and payment documents. Payment documents contain transactio
 
 More detailed architecture notes live in [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
+### Payment Data Model (Actual Structure)
+
+```json
+{
+  "_id": "65f1c2e9a3b4c5d6e7f89012",
+  "merchant": "Stripe Demo Merchant",
+  "payment_type": "card_payment",
+  "amount_minor": 2599,
+  "currency": "GBP",
+  "region": "UK",
+  "status": "pending",
+  "created_by": "merchant@test.com",
+  "initiated_at": "2026-04-28T14:30:00.000000",
+  "customer_details": {
+    "name": "Ava Reed",
+    "email": "ava.reed@example.com",
+    "country": "UK"
+  },
+  "provider_attempts": [
+    {
+      "provider": "Stripe",
+      "result": "failure",
+      "latency_ms": 310
+    },
+    {
+      "provider": "PayPal",
+      "result": "success",
+      "latency_ms": 184
+    }
+  ]
+}
+```
+
+`provider_attempts` can be empty for a newly created pending payment, or contain multiple entries when more than one provider has been attempted. `customer_details` is stored as an embedded object on every payment document.
+
+### User Data Model
+
+```json
+{
+  "_id": "65f1c2e9a3b4c5d6e7f89045",
+  "email": "merchant@test.com",
+  "password": "$2b$12$hashedPasswordValue",
+  "role": "merchant"
+}
+```
+
+User passwords are hashed before storage. The `role` value is one of `admin`, `finance`, or `merchant`, and drives RBAC across both the Angular frontend and Flask backend.
+
+### Document Design
+
+`customer_details` is embedded inside the payment document to keep each payment self-contained and avoid joins when rendering detail panels, filtering operational records, or reviewing transaction history.
+
+`provider_attempts` is stored as an array because a single payment may move through multiple provider attempts. Each attempt records the provider, result, and latency in milliseconds, which makes routing simulation visible rather than reducing the payment to one final status.
+
+This structure supports retry logic, analytics aggregation, and full payment traceability. Provider attempts represent the routing simulation history, latency values act as a future optimisation signal, and payment `status` is controlled through finance/admin workflows rather than uncontrolled merchant edits.
+
 ## Request Flow
 
 ```mermaid
