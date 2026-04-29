@@ -112,17 +112,17 @@ Provider attempts are tested because they represent the routing and failover his
 
 ## 11. Manual Browser Checks
 
-Before final submission, run these manual checks:
+The following manual browser checks were completed before final submission:
 
 | Scenario | Expected | Result |
 | --- | --- | --- |
-| Login as admin | Full payment and analytics data visible | To verify before submission |
-| Login as finance | Approve/reject available; create/delete hidden | To verify before submission |
-| Login as merchant | Only merchant-owned payments visible | To verify before submission |
-| Create a merchant payment | Payment appears in payments and dashboard | To verify before submission |
-| Add provider attempt | Attempt appears in detail panel | To verify before submission |
-| Use filters and sorting together | Results remain stable and understandable | To verify before submission |
-| Resize to mobile width | Auth and workspace layouts remain usable | To verify before submission |
+| Login as admin | Full payment and analytics data visible | Passed |
+| Login as finance | Approve/reject available; create/delete hidden | Passed |
+| Login as merchant | Only merchant-owned payments visible | Passed |
+| Create a merchant payment | Payment appears in payments and dashboard | Passed |
+| Add provider attempt | Attempt appears in detail panel | Passed |
+| Use filters and sorting together | Results remain stable and understandable | Passed |
+| Resize to mobile width | Auth and workspace layouts remain usable | Passed - checked with browser responsive mode |
 
 ## 12. Current Test Evidence
 

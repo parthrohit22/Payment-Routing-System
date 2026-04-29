@@ -415,16 +415,6 @@ Full endpoint examples are documented in [docs/API_ENDPOINTS.md](./docs/API_ENDP
 - advanced analytics for success rate by provider and region
 - production deployment notes with environment-specific configuration
 
-## COM661 Rubric Alignment
-
-| Criterion | Evidence |
-| --- | --- |
-| Use of Angular | Standalone components, signals, computed state, reactive forms, route guards, interceptor, pipes, inputs/outputs, template control flow, and charts |
-| Application Structure | Clear `core`, `features`, and `shared` separation with typed models and reusable components |
-| Backend Communication | Authenticated GET, POST, PUT, and DELETE flows with JWT, pagination, role scoping, and analytics endpoints |
-| Usability | Search, filters, sorting, pagination, modals, detail panels, notifications, confirmation, loading/error/empty states, responsive auth, and theme support |
-| Submission Quality | README, API docs, architecture notes, application documentation, and testing summary are included |
-
 ## Documentation
 
 - [Architecture Notes](./docs/ARCHITECTURE.md)
