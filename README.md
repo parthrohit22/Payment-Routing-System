@@ -4,7 +4,7 @@
 ![Flask](https://img.shields.io/badge/API-Flask-000000?style=flat-square&logo=flask&logoColor=white)
 ![MongoDB](https://img.shields.io/badge/Database-MongoDB-47A248?style=flat-square&logo=mongodb&logoColor=white)
 ![JWT](https://img.shields.io/badge/Auth-JWT-000000?style=flat-square&logo=jsonwebtokens&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-35%20passing-success?style=flat-square)
+![Tests](https://img.shields.io/badge/Tests-46%20passing-success?style=flat-square)
 ![Status](https://img.shields.io/badge/Status-COM661%20Portfolio%20Project-blue?style=flat-square)
 
 <p align="center">

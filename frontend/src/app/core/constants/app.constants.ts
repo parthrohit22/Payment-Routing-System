@@ -8,7 +8,7 @@ export const INITIAL_PAGE_FETCH_SIZE = 5;
 export const DEFAULT_PAGE_SIZE = 5;
 
 export const CURRENCY_OPTIONS = ['GBP', 'USD', 'EUR'] as const;
-export const STATUS_OPTIONS = ['succeeded', 'pending', 'failed'] as const;
+export const STATUS_OPTIONS = ['success', 'pending', 'failed'] as const;
 
 export const SORT_OPTIONS = [
   { value: 'date-desc', label: 'Newest first' },
