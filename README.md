@@ -18,7 +18,6 @@
   <a href="./docs/ARCHITECTURE.md"><b>Architecture Notes</b></a> ·
   <a href="#local-development"><b>Local Development</b></a> ·
   <a href="#api-overview"><b>API Overview</b></a> ·
-  <a href="#com661-rubric-alignment"><b>Rubric</b></a>
 </p>
 
 ## Overview
