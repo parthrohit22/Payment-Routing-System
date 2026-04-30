@@ -151,6 +151,22 @@ class SecurityTestCase(unittest.TestCase):
         self.assertIsNone(self.payments.find_one({"created_by": "merchant@test.com"}))
         self.assertIsNotNone(self.payments.find_one({"created_by": "other@test.com"}))
 
+    def test_admin_cannot_delete_own_account(self):
+        response = self.client.delete(
+            "/me",
+            headers=self.headers("admin@test.com", "admin"),
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_finance_cannot_delete_own_account(self):
+        response = self.client.delete(
+            "/me",
+            headers=self.headers("finance@test.com", "finance"),
+        )
+
+        self.assertEqual(response.status_code, 403)
+
     def test_merchant_update_returns_forbidden(self):
         response = self.client.put(
             f"/payments/{self.payment_id}",

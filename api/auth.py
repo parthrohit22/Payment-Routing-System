@@ -93,7 +93,7 @@ def login():
 
 @auth_bp.route("/me", methods=["DELETE"])
 def delete_me():
-    err = require_roles(["admin", "merchant", "finance"])
+    err = require_roles(["merchant"])
     if err:
         return err
 

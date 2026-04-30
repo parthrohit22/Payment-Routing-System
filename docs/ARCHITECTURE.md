@@ -1,6 +1,6 @@
 # Payment Routing System Architecture
 
-Payment Routing System is split into an Angular frontend, a Flask API, and MongoDB persistence. The architecture is intentionally small enough for coursework review but structured around real full-stack boundaries: the browser owns interaction, the API owns identity and persistence rules, and the database stores operational payment history.
+Payment Routing System is split into an Angular frontend, a Flask API, and MongoDB persistence. The design is deliberately compact, but it keeps real full-stack boundaries: the browser owns interaction, the API owns identity and mutation rules, and MongoDB stores operational payment history.
 
 ## System Context
 
@@ -17,11 +17,11 @@ flowchart TB
     Analytics --> PaymentStore
 ```
 
+The diagram shows the main control boundary. Angular never reads or writes MongoDB directly. Every protected payment and analytics request passes through Flask, where JWT identity and role permissions are resolved before records are returned or changed.
+
 ## Frontend Responsibilities
 
-The Angular application is responsible for product workflow and usability.
-
-Key frontend responsibilities:
+The Angular application is responsible for workflow presentation and usability:
 
 - render role-aware pages and navigation
 - protect private routes through guards
@@ -33,30 +33,31 @@ Key frontend responsibilities:
 - show loading, empty, error, confirmation, and notification states
 - render analytics charts from backend metric endpoints
 
-The frontend is organised into:
+Frontend organisation:
 
 | Area | Responsibility |
 | --- | --- |
 | `core` | API services, guards, interceptor, models, constants |
 | `features` | route-level screens: auth, dashboard, payments, analytics |
-| `shared` | reusable UI components such as shell, empty state, stat card, dialog, notification banner, theme toggle |
+| `shared` | reusable UI such as shell, empty state, stat card, dialog, notification banner, theme toggle |
+
+The frontend hides unavailable actions for clarity, but this is not treated as the security boundary.
 
 ## Backend Responsibilities
 
-The Flask API provides the server contract used by Angular.
-
-Key backend responsibilities:
+The Flask API provides the authoritative server contract:
 
 - register and authenticate users
-- issue JWT tokens
-- decode JWT identity on protected requests
-- enforce role access for payment and analytics endpoints
+- issue and decode JWT tokens
+- enforce role access for payment, analytics, and account endpoints
 - scope merchant payment queries by authenticated email
 - persist payment records in MongoDB
+- set new payments to `pending`
+- validate controlled status/provider-attempt mutations
 - return paginated payment responses
 - aggregate analytics from stored payment data
 
-The API keeps the frontend from needing direct database knowledge. Angular asks for payments and analytics; Flask decides which records the current user is allowed to access.
+Angular asks for payments and analytics; Flask decides which records the current user can access and which mutations are allowed.
 
 ## Authentication Flow
 
@@ -83,7 +84,7 @@ After login, the Angular interceptor sends:
 Authorization: Bearer <jwt-token>
 ```
 
-The API decodes the token and attaches the identity to the request context. Protected routes then check whether the role is allowed.
+The API decodes the token and attaches identity to the request context. Protected routes then check the role before querying or mutating data.
 
 ## Role-Based Access
 
@@ -93,29 +94,30 @@ Frontend:
 
 - `authGuard` blocks private pages when no session exists
 - `roleGuard` blocks routes when the active role is not allowed
-- computed permission checks show/hide actions in the payments workspace
+- computed permission checks show/hide actions in the payments workspace and app shell
 
 Backend:
 
 - protected endpoints require a valid JWT
-- admin and finance users can access global payment data
+- admin and finance users can access global payment and analytics data
 - merchant users are scoped with `created_by = authenticated_email`
+- account deletion is merchant-only
+- payment deletion is admin-only
+- finance updates are limited to review/status/provider-attempt actions
 
-This double layer matters because UI hiding is not security by itself. The backend still owns the real data boundary.
+This double layer matters because UI hiding is not security by itself. The backend owns the real data boundary.
 
 ## Auth0-ready Boundary
 
-The current application does not implement Auth0. It uses Flask-issued JWTs for the submitted coursework version. The authentication boundary is still deliberately isolated so a future production identity provider can be introduced without rewriting the payments, analytics, dashboard, or RBAC feature screens.
+The current application does not implement Auth0. It uses Flask-issued JWTs for the submitted coursework version. The authentication boundary is isolated so a future production identity provider could replace token issuing/validation without rewriting payments, analytics, dashboard, or RBAC screens.
 
-The main boundary points are:
+Preserved boundary points:
 
-- `AuthService` owns login, registration, logout, active session state, role, email, and token access
-- route guards use the auth abstraction to protect authenticated and role-specific screens
-- the HTTP interceptor centralises bearer token attachment for API requests
-- backend token validation resolves the authenticated identity before protected handlers run
-- payment queries scope merchant data using the authenticated email, not client-side filtering alone
-
-With this structure, a future Auth0 migration would replace the token issuer and validation mechanism while keeping the same application-level concepts: authenticated user, role, bearer token, guarded routes, and server-side merchant scoping.
+- `AuthService` owns login, registration, logout, active session state, role, email, token access, and account deletion calls
+- route guards use the auth abstraction
+- the HTTP interceptor centralises bearer token attachment
+- backend token validation resolves identity before protected handlers run
+- merchant scoping remains server-side
 
 ## Payment Lifecycle
 
@@ -150,9 +152,11 @@ sequenceDiagram
     API-->>Analytics: Chart metrics
 ```
 
+The flow is lifecycle-driven. Creation produces a pending record. Provider attempts add routing evidence. Status updates express the operational outcome. Analytics are refreshed from the same persisted records.
+
 ## Provider Attempts
 
-`provider_attempts` is the core modelling decision behind the routing story. Instead of storing only a final provider or final result, the payment record stores every attempt that matters operationally.
+`provider_attempts` is the core modelling decision behind the routing story. Instead of storing only a final provider or final result, the payment record stores every provider attempt that matters operationally.
 
 Example:
 
@@ -198,7 +202,9 @@ flowchart TD
     H --> J
 ```
 
-## Pagination Model
+This diagram is conceptual: it explains how the recorded attempts support routing visibility. The submitted implementation records attempts manually through the operations UI rather than running an automated routing engine.
+
+## Pagination and Local State
 
 The payments API supports `page` and `limit`. The backend default and frontend page size are aligned at 5 entries per page.
 
@@ -206,19 +212,19 @@ The payments API supports `page` and `limit`. The backend default and frontend p
 GET /api/payments?page=1&limit=5
 ```
 
-The frontend uses role-scoped payment data, then applies local search, filter, sort, and UI pagination. This gives a responsive table experience while preserving the backend pagination contract.
+The frontend uses role-scoped payment data, then applies local search, filter, sort, and UI pagination. Signals and computed values keep the original response intact while deriving the displayed table state.
 
 ## Cache Isolation
 
 The payments service caches fetched payment records for efficiency. The cache key includes role, email, and token so a session cannot reuse another user's dataset.
 
-This is especially important for merchant users. If an admin previously loaded global payments, a later merchant session must not see that cached global list.
+This matters for merchant isolation. If an admin previously loaded global payments, a later merchant session must not see that cached global list.
 
 ## Analytics Refresh
 
 Analytics data is derived from the same payment records used by the operations workflow. After a payment mutation, the frontend calls `AnalyticsService.refreshAfterMutation()`. The analytics page observes that refresh signal and reloads volume, latency, and status metrics.
 
-This keeps the dashboard-style views connected to real operational changes.
+This keeps charts connected to real operational changes rather than static dashboard content.
 
 ## Data Boundaries
 
@@ -226,8 +232,9 @@ This keeps the dashboard-style views connected to real operational changes.
 | --- | --- | --- |
 | Form validation | Angular | Prevents invalid user input before API calls |
 | Authentication | Flask + Angular | Flask issues JWT; Angular stores and attaches it |
-| Authorization | Flask + Angular | Angular controls UX; Flask protects data |
+| Authorization | Flask + Angular | Angular controls UX; Flask protects data and mutations |
 | Persistence | Flask + MongoDB | Angular never writes directly to the database |
+| Payment lifecycle | Flask + MongoDB | Status and provider attempts are updated through protected endpoints |
 | Analytics | Flask + MongoDB | Aggregation is based on stored payments |
 | Presentation state | Angular | Signals and computed values drive UI state |
 

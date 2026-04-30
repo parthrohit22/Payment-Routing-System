@@ -1,10 +1,10 @@
 # Auth0 Production Identity Upgrade Plan
 
-This document describes a future production identity upgrade path for Payment Routing System. Auth0 is not implemented in the submitted coursework version. The current application uses Flask-issued custom JWT authentication so the project remains stable, fully local, and reliable for assessment.
+This document describes a future production identity upgrade path for Payment Routing System. Auth0 is not implemented in the submitted coursework version. The current application uses Flask-issued custom JWT authentication so the project remains stable, local, and reliable for assessment.
 
 ## Why Auth0 Would Be Used In Production
 
-Auth0 would be introduced to move identity management out of the application code and into a dedicated production identity platform.
+Auth0 would move identity management out of application code and into a dedicated identity platform.
 
 Production benefits:
 
@@ -14,11 +14,11 @@ Production benefits:
 - token lifecycle management including expiry, refresh, and revocation patterns
 - tenant-managed users, roles, login policies, and security settings
 
-For a fintech operations tool, this is valuable because identity is a high-risk boundary. Admin and finance users can view global payment data, while merchant users must only access their own records. A managed identity provider would reduce custom security surface area in a production deployment.
+For a fintech operations tool, identity is a high-risk boundary. Admin and finance users can view global payment data, while merchants must only access their own records. A managed identity provider would reduce custom authentication surface area, but it would not replace application-level RBAC or server-side merchant scoping.
 
 ## Current Authentication Summary
 
-The current submitted version uses a custom JWT flow implemented by the Flask API and consumed by the Angular frontend.
+The submitted version uses a custom JWT flow implemented by Flask and consumed by Angular.
 
 Current flow:
 
@@ -27,18 +27,18 @@ Current flow:
 3. Flask issues a custom JWT containing identity and role data.
 4. Angular stores the session and uses the token for authenticated requests.
 5. The HTTP interceptor attaches the token as a bearer token.
-6. Angular guards enforce authenticated and role-specific route access.
-7. The active role controls admin, finance, and merchant permissions.
+6. Angular guards enforce authenticated and role-specific route access for navigation.
+7. Flask enforces role-specific data access and mutation rules on protected endpoints.
 
 The role model is:
 
 | Role | Access |
 | --- | --- |
-| `admin` | Full payment operations access |
-| `finance` | Global payment review, approval, rejection, and analytics |
-| `merchant` | Merchant-scoped payment access only |
+| `admin` | Global payment visibility, core payment edits, provider attempts, status changes, payment deletion |
+| `finance` | Global payment review, approval/rejection, provider attempts, and analytics |
+| `merchant` | Merchant-scoped payment visibility, payment creation, analytics for own records, and own account deletion |
 
-Merchant scoping is based on the authenticated email. This prevents merchant users from seeing global payment records.
+Merchant scoping is based on the authenticated email. This prevents merchant users from seeing global payment records even if the frontend is bypassed.
 
 ## Future Auth0 Architecture
 
@@ -53,17 +53,17 @@ A production Auth0 migration would introduce the following identity components:
 | Logout URLs | Allow Auth0 to redirect users back to Angular after logout |
 | Custom role claim | Carries `admin`, `finance`, or `merchant` role information in a namespaced claim |
 
-The future architecture would keep Angular and Flask separated:
+Future architecture:
 
 ```text
 Angular SPA -> Auth0 Hosted Login -> Auth0 Access Token -> Flask API -> MongoDB
 ```
 
-Auth0 would issue RS256-signed access tokens for the configured API audience. Flask would validate those tokens before serving protected payment and analytics endpoints.
+Auth0 would issue RS256-signed access tokens for the configured API audience. Flask would validate those tokens before serving protected payment, analytics, and account endpoints.
 
 ## Backend Migration Plan
 
-The Flask API would need a focused authentication-layer change while preserving the existing endpoint contracts.
+The Flask API would need a focused authentication-layer change while preserving endpoint behaviour.
 
 Backend migration steps:
 
@@ -77,7 +77,7 @@ Backend migration steps:
 8. Preserve existing RBAC checks for `admin`, `finance`, and `merchant`.
 9. Preserve merchant scoping by filtering merchant records with the authenticated email.
 
-The important rule is that merchant scoping must remain server-side. Even with Auth0, the backend must continue to enforce `created_by = authenticated_email` for merchant users.
+The important rule is that merchant scoping and mutation authorization must remain server-side. Auth0 can issue identity, but Flask must still decide which payments and account actions are allowed.
 
 ## Frontend Migration Plan
 
@@ -93,7 +93,7 @@ Frontend migration steps:
 6. Keep role-based UI decisions behind `AuthService` so feature components do not depend directly on Auth0 SDK details.
 7. Map the Auth0 custom role claim into the existing role model used by the app.
 
-The goal would be to keep most feature components unchanged. Payments, analytics, dashboard, RBAC UI controls, and merchant scoping should continue to depend on the app-level auth abstraction rather than on Auth0 directly.
+The goal would be to keep feature components stable. Payments, analytics, dashboard, RBAC UI controls, merchant-only account deletion, and merchant scoping should continue to depend on the app-level auth abstraction rather than Auth0 SDK details.
 
 ## Risks And Migration Considerations
 
@@ -105,7 +105,7 @@ The goal would be to keep most feature components unchanged. Payments, analytics
 | Backend JWT validation changes | Flask must validate RS256 tokens, JWKS keys, issuer, and audience correctly |
 | Local demo reliability | External identity dependency can make coursework demos less predictable |
 
-These risks are manageable in production but are unnecessary for the current assessed version.
+These risks are manageable in production but unnecessary for the current assessed version.
 
 ## Reason For Retaining Custom JWT For Coursework
 
@@ -115,6 +115,6 @@ The submitted version keeps custom Flask JWT authentication because it is:
 - fully testable without an external tenant
 - reliable during live demos and marking
 - aligned with the existing Flask API and Angular services
-- sufficient to demonstrate authentication, guards, interceptor usage, RBAC, and merchant-scoped data access
+- sufficient to demonstrate authentication, guards, interceptor usage, RBAC, controlled mutations, and merchant-scoped data access
 
-Auth0 remains a strong production hardening path, but it is deliberately documented rather than implemented in this coursework submission.
+Auth0 remains a production hardening path, but it is deliberately documented rather than implemented in this coursework submission.

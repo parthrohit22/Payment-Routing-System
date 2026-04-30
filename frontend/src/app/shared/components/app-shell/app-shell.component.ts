@@ -49,6 +49,8 @@ export class AppShellComponent {
     return role === 'admin' || role === 'merchant' || role === 'finance';
   });
 
+  protected readonly canDeleteAccount = computed(() => this.authService.role() === 'merchant');
+
   protected readonly navItems = computed(() => {
     const baseItems = [
       {

@@ -2,11 +2,11 @@
 
 ## 1. System Overview
 
-Payment Routing System is a fintech operations application for managing payment orchestration. It gives different user roles a controlled view of payment records, provider attempts, transaction statuses and analytics.
+Payment Routing System is a full-stack operations application for payment lifecycle control. It presents payments as operational records that move from creation to review, provider attempts, and final status. The frontend is the controlled user interface; the Flask API is the authority for authentication, RBAC, merchant scoping, persistence, and mutation rules.
 
-The system is built around the idea that a payment may not succeed on the first provider. By storing provider attempts, latency and result data, the application gives operators visibility into routing behaviour and fallback outcomes.
+The core modelling decision is `provider_attempts`. A payment may not succeed on the first provider, so the system records each attempt with provider, result, and latency. This turns routing/fallback behaviour into inspectable history and gives analytics meaningful operational data.
 
-The Angular frontend is the assessed COM661 component. It consumes a Flask API backed by MongoDB and presents a role-aware operational interface.
+The Angular frontend is the assessed COM661 component. It consumes a Flask API backed by MongoDB and demonstrates role-aware workflows without treating the browser as the data authority.
 
 ## 2. Architecture
 
@@ -16,38 +16,38 @@ The application has three main layers:
 Angular Frontend -> Flask API -> MongoDB
 ```
 
-The Angular frontend handles user interaction. It renders login/register pages, the dashboard, payments workspace, analytics charts and role-specific controls. It does not directly access the database. All data is requested through Angular services.
+Angular handles interaction: login/register pages, dashboard, payments workspace, analytics charts, confirmation dialogs, notifications, and role-aware controls. It validates input and manages interface state before calling the API.
 
-The Flask API handles authentication, role checks, payment persistence and analytics queries. It decodes JWT tokens, identifies the active user and applies role-aware data access.
+Flask handles the server contract: login, JWT issuing/validation, role checks, merchant-scoped queries, payment persistence, controlled payment updates, account deletion rules, and analytics aggregation.
 
-MongoDB stores users and payment records. Payment records include transaction details, customer details, status and provider attempts.
+MongoDB stores users and payment records. Payment records include transaction details, customer details, status, merchant ownership, initiated timestamp, and provider attempts.
 
 ## 3. Data Flow
 
 ### Login request
 
 1. User enters email and password in the Angular login form.
-2. `AuthService.login` sends a `POST /api/auth/login` request.
-3. Flask validates credentials and returns email, role and JWT token.
+2. `AuthService.login` sends `POST /api/auth/login`.
+3. Flask validates credentials against MongoDB and returns email, role and JWT token.
 4. Angular stores the session in session storage.
-5. The router sends the user to the correct workspace for their role.
+5. Guards and role-aware navigation use the session for browser workflow decisions.
 
 ### Authenticated payment request
 
 1. A protected page calls `PaymentsService`.
 2. The HTTP interceptor reads the stored session.
 3. The request is sent with `Authorization: Bearer <token>`.
-4. Flask decodes the JWT and attaches the user identity to the request.
-5. The backend queries MongoDB using the user's role.
-6. The response returns payment data to Angular.
-7. Angular updates signals and computed values for the UI.
+4. Flask decodes the JWT and attaches identity to the request.
+5. The backend queries MongoDB using the role boundary.
+6. Merchant requests are scoped by `created_by = authenticated_email`.
+7. Angular receives data and updates signals/computed values for the UI.
 
 ### Payment mutation request
 
-1. User submits a create, update, status or provider attempt action.
-2. Angular validates form state and sends the request through `PaymentsService`.
-3. Flask validates role and request data.
-4. MongoDB is updated.
+1. User submits create, status, provider-attempt, edit, or delete action.
+2. Angular validates form state and calls `PaymentsService`.
+3. Flask validates role and allowed fields.
+4. MongoDB is updated only through the API.
 5. Angular shows notification feedback.
 6. Payment data is refreshed.
 7. Analytics refresh state is triggered so charts reflect the latest records.
@@ -85,11 +85,11 @@ The `shared` folder contains reusable UI components:
 - notification banner
 - theme toggle
 
-This keeps repeated UI behaviour out of feature components and makes the frontend easier to maintain.
+This separates workflow screens from reusable interface behaviour and keeps repeated UI decisions out of feature components.
 
 ## 5. State Management
 
-The frontend uses Angular signals for local reactive state rather than broad shared mutable objects.
+The frontend uses Angular signals for local reactive state rather than broad shared mutable objects. This is important because the payments workspace combines multiple concerns: role-scoped data, search, filters, sorting, pagination, current selection, loading states, and mutation feedback.
 
 Examples in the payments page:
 
@@ -109,18 +109,18 @@ Computed values derive UI-ready data:
 - total page count
 - role-based permissions
 
-This means filtering, sorting and pagination are predictable and do not mutate the original API response.
+The original API response is not mutated by filtering or sorting. This makes selection synchronisation and reset behaviour predictable, especially when filters remove the currently selected payment from view.
 
 ## 6. API Integration
 
 API access is isolated inside Angular services:
 
-- `AuthService` handles login, registration, logout and session state.
-- `PaymentsService` handles paginated payments, full payment aggregation, create, update and delete operations.
+- `AuthService` handles login, registration, logout, active session state, and account deletion requests.
+- `PaymentsService` handles paginated payments, full payment aggregation, create, update and payment delete operations.
 - `AnalyticsService` handles volume, latency and status analytics.
 - `HealthService` checks backend availability.
 
-The services use typed models so components work with known data shapes. The HTTP interceptor adds the authentication token to protected requests, keeping token handling out of feature components.
+The services use typed models so components work with known data shapes. The HTTP interceptor centralises bearer token attachment so feature components do not manually handle auth headers.
 
 ## 7. Authentication Flow
 
@@ -141,11 +141,11 @@ Route protection is handled by:
 
 ## 8. Role-Based Access Logic
 
-The frontend and backend both contribute to RBAC.
+Frontend and backend both participate in RBAC, but they do not have equal authority.
 
 Frontend:
 
-- route guards restrict screens
+- route guards restrict navigation
 - computed permission checks hide or show actions
 - forms and buttons are displayed according to role
 
@@ -154,22 +154,27 @@ Backend:
 - protected endpoints require JWT identity
 - merchant queries are scoped by `created_by`
 - admin and finance users can access platform-wide payment data
+- payment and account mutations are checked against role-specific rules
 
 Role behaviour:
 
 | Role | Behaviour |
 | --- | --- |
-| Admin | Full operational control, including delete and provider attempt management |
-| Finance | Can review payment data, approve/reject statuses and view analytics |
-| Merchant | Can create payments and view only payments created by their own account |
+| Admin | Global payment visibility, core payment edits, provider attempts, status changes, and payment deletion |
+| Finance | Global payment review, approve/reject status changes, provider attempts, and analytics |
+| Merchant | Merchant-scoped payment visibility, payment creation, analytics for own records, and own account deletion |
 
-Merchant scoping matters because payment records include customer and transaction information. It prevents one merchant from seeing another merchant's operational data.
+Merchant scoping matters because payment records include customer and transaction information. UI restrictions improve usability, but backend scoping protects the actual data boundary.
 
 ## 9. Key Design Decisions
 
 ### Why `provider_attempts` exists
 
-Payment routing is not always a single action. A provider can fail or respond slowly, and a fallback provider may be attempted. Storing attempts as an array preserves that history. It supports troubleshooting, failover visibility and provider latency analytics.
+Payment routing is not always a single action. A provider can fail or respond slowly, and a fallback provider may be attempted. Storing attempts as an ordered array preserves that history, supports investigation, and provides the source data for provider latency analytics.
+
+### Why lifecycle mutation is controlled
+
+Payment status and provider attempts affect operational truth. Merchant users can initiate payments, but finance/admin users control status and provider-attempt updates so review actions remain separate from merchant data entry.
 
 ### Why pagination is used
 
@@ -177,16 +182,16 @@ Payment systems can accumulate many records. Pagination keeps API responses and 
 
 ### Why role scoping matters
 
-Admin and finance users need broad visibility, but merchants should only see their own records. This is a security and usability requirement: merchants get a focused workspace and sensitive platform-wide data remains protected.
+Admin and finance users need broad visibility for review and analytics. Merchants need focused access to their own records. Server-side scoping prevents a merchant session from accessing platform-wide data even if frontend state or requests are manipulated.
 
 ### Why analytics are separated from payments
 
-The payments page is for operational action. Analytics are separated so performance trends such as provider latency and status distribution can be reviewed without cluttering the transaction workflow.
+The payments page is for operational action. Analytics are separated so payment volume, provider latency, and status distribution can be reviewed without cluttering the transaction workflow. The metrics still derive from the same stored payment records.
 
 ## 10. Limitations
 
-- Provider routing decisions are represented through recorded provider attempts; the current system does not run an automated provider-selection algorithm in the frontend.
+- Provider routing decisions are represented through recorded provider attempts; the current system does not run an automated provider-selection algorithm.
 - The frontend depends on the Flask API being available and seeded with users/data for a full demonstration.
-- The analytics views focus on core operational metrics rather than advanced forecasting.
-- Automated tests cover important frontend behaviours, but full browser end-to-end tests would be a useful future improvement.
+- Analytics focus on core operational metrics rather than forecasting or predictive modelling.
+- Automated tests cover important frontend and backend behaviours, but full browser end-to-end tests would improve confidence.
 - The project is coursework-sized, so production concerns such as audit logs, refresh tokens, deployment pipelines and observability are intentionally limited.

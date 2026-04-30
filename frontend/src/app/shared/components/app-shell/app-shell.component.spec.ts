@@ -49,6 +49,8 @@ describe('AppShellComponent', () => {
 
   it('confirms account deletion before logging out', () => {
     const deleteButton = buttonWithText('Delete Account');
+    expect(deleteButton).toBeTruthy();
+
     deleteButton?.click();
     fixture.detectChanges();
 
@@ -60,6 +62,20 @@ describe('AppShellComponent', () => {
 
     expect(authService.deleteAccount).toHaveBeenCalled();
     expect(authService.logout).toHaveBeenCalled();
+  });
+
+  it('hides account deletion for admin users', () => {
+    authService.role.set('admin');
+    fixture.detectChanges();
+
+    expect(buttonWithText('Delete Account')).toBeUndefined();
+  });
+
+  it('hides account deletion for finance users', () => {
+    authService.role.set('finance');
+    fixture.detectChanges();
+
+    expect(buttonWithText('Delete Account')).toBeUndefined();
   });
 
   function buttonWithText(text: string): HTMLButtonElement | undefined {

@@ -1,6 +1,6 @@
 # API Endpoints
 
-The Angular frontend communicates with the Flask API through `/api`, using the proxy configuration in `frontend/proxy.conf.json`. Protected endpoints require a JWT bearer token. The Angular HTTP interceptor attaches the token from the active session.
+The Angular frontend communicates with the Flask API through `/api`, using `frontend/proxy.conf.json` during local development. Protected endpoints require a JWT bearer token. The Angular interceptor attaches the active session token, but Flask remains the authority for identity, role checks, merchant scoping, and mutation rules.
 
 ```http
 Authorization: Bearer <jwt-token>
@@ -10,7 +10,7 @@ Authorization: Bearer <jwt-token>
 
 ### POST `/api/auth/login`
 
-Authenticates a user and returns a session used by the Angular app.
+Authenticates a stored user and returns the session data Angular needs for guarded navigation and role-aware interface decisions.
 
 JWT required: No
 
@@ -44,7 +44,7 @@ Frontend usage:
 
 ### POST `/api/auth/register`
 
-Registers a merchant user.
+Registers a user account. The Angular registration page submits merchant registration, keeping self-service signup aligned with merchant-scoped access rather than privileged roles.
 
 JWT required: No
 
@@ -70,11 +70,45 @@ Frontend usage:
 - `AuthService.register`
 - register form
 
+### DELETE `/api/me`
+
+Deletes the authenticated merchant account and removes payments created by that merchant account. This is account/profile deletion, not platform payment administration. Admin and finance users do not receive this control in the frontend and are rejected by the backend.
+
+JWT required: Yes
+
+Allowed backend role:
+
+- merchant
+
+Example request:
+
+```http
+DELETE /api/me
+Authorization: Bearer <jwt-token>
+```
+
+Response example:
+
+```json
+{
+  "status": 200,
+  "message": "Account deleted"
+}
+```
+
+Frontend usage:
+
+- merchant-only app-shell account deletion
+- confirmation dialog
+- logout after successful deletion
+
 ## Payments
+
+Payments are lifecycle records. The backend creates them as `pending`, scopes retrieval by role, validates allowed mutation fields, and stores provider attempts as routing history.
 
 ### GET `/api/payments`
 
-Retrieves paginated payment records. Admin and finance users receive platform-wide payments. Merchants receive only payments created by their authenticated account.
+Retrieves paginated payment records under the active user's role boundary. Admin and finance users receive platform-wide records. Merchants receive only records where `created_by` matches the authenticated email. Optional query parameters support backend filtering before pagination.
 
 JWT required: Yes
 
@@ -143,7 +177,7 @@ Frontend usage:
 
 ### POST `/api/payments`
 
-Creates a new payment. The backend sets the initial status to `pending` and stores the authenticated user's email as `created_by`.
+Initiates a payment record. The backend sets `status` to `pending`, records the authenticated user's email as `created_by`, stores customer details, and accepts an initial `provider_attempts` array when supplied.
 
 JWT required: Yes
 
@@ -181,7 +215,9 @@ Frontend usage:
 
 ### PUT `/api/payments/{id}`
 
-Updates a payment status and/or appends provider attempt data.
+Applies controlled payment lifecycle mutations. Merchant users are blocked from updates. Finance users can update status and append provider attempts, but cannot alter core payment/customer fields. Admin users can update core fields as well as status/provider attempts.
+
+Provider attempts are appended to the existing array, preserving routing history rather than replacing it.
 
 JWT required: Yes
 
@@ -219,7 +255,7 @@ Frontend usage:
 
 ### DELETE `/api/payments/{id}`
 
-Deletes a payment record.
+Deletes a payment record as a platform administration action. This is separate from merchant account/profile deletion.
 
 JWT required: Yes
 
@@ -245,17 +281,17 @@ Response example:
 
 Frontend usage:
 
-- admin delete action
+- admin payment delete action
 - confirmation dialog
 - payments refresh after mutation
 
 ## Analytics
 
-Analytics endpoints are role-protected and use the same backend identity rules as payments. Merchant users receive analytics based only on their own payment records.
+Analytics endpoints are role-protected and use the same backend identity rules as payments. Merchant users receive analytics only from their own payment records. Admin and finance users receive platform-wide analytics. Metrics are derived from stored lifecycle records and provider attempts.
 
 ### GET `/api/analytics/payment-volume`
 
-Returns payment volume grouped by currency.
+Returns payment volume grouped by currency, with optional filters applied before aggregation.
 
 JWT required: Yes
 
@@ -283,7 +319,7 @@ Response example:
 
 ### GET `/api/analytics/provider-latency`
 
-Returns average latency grouped by provider.
+Returns average latency grouped by provider using the `provider_attempts` routing history stored on payment records.
 
 JWT required: Yes
 
@@ -313,7 +349,7 @@ Response example:
 
 ### GET `/api/analytics/payment-status`
 
-Returns payment counts grouped by status.
+Returns payment counts grouped by lifecycle status.
 
 JWT required: Yes
 
@@ -352,3 +388,28 @@ Frontend usage:
 - `AnalyticsService.getPaymentStatus`
 - analytics charts
 - refresh after payment mutation
+
+## Changes Since CW1
+
+### Security and Identity
+
+- JWT authentication was added so API access is tied to a signed identity rather than anonymous requests.
+- Role-Based Access Control was introduced for `admin`, `finance`, and `merchant`.
+- Merchant visibility is enforced server-side using the authenticated email, not only frontend filtering.
+- Merchant account deletion is restricted to merchant users and removes records created by that account.
+
+### Payment Workflow
+
+- Payments now follow a controlled lifecycle: backend-created `pending` records, restricted updates, provider attempt recording, and final status reporting.
+- `provider_attempts` captures routing/fallback evidence with provider, result, and latency.
+- Finance users can perform review-style lifecycle changes without being able to rewrite core payment/customer fields.
+
+### Querying and Analytics
+
+- `GET /payments` now supports role scoping, pagination, status filtering, and initiated-date filtering.
+- Analytics endpoints now respect the same role visibility rules as payments.
+- Provider latency and status distribution metrics were added so the system reports operational behaviour rather than only listing records.
+
+### Summary
+
+The CW2 API is a more mature system boundary than CW1: authentication identifies the user, RBAC constrains what that user can see or mutate, provider attempts make routing history visible, and analytics are derived from the same scoped operational records used by the payments workflow.
